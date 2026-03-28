@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ninja Database 2025 - Dashboard</title>
+    <style>
+        :root {
+            --primary-color: #231f20;
+            --secondary-color: #358ebc;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --card-bg: #ffffff;
+            --hover-color: #f1c40f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 250px;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+        }
+
+        .sidebar-header {
+            text-align: center;
+            padding: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+        }
+
+        .sidebar-header span {
+            color: var(--secondary-color);
+        }
+
+        .nav-links {
+            list-style: none;
+        }
+
+        .nav-links li a {
+            display: block;
+            padding: 15px 25px;
+            color: #bdc3c7;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links li a:hover, .nav-links li a.active {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: var(--primary-color);
+        }
+
+        /* Grid Layout for Modules */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            border-top: 4px solid transparent;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+            border-top: 4px solid var(--secondary-color);
+        }
+
+        .card h2 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+
+        .card p {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        /* Category Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .badge-action { background-color: #e8f4f8; color: #358dbd; }
+        .badge-data { background-color: #f4f1ea; color: #e67e22; }
+        .badge-gamify { background-color: #f9ebea; color: #e74c3c; }
+
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            Ninja<span>DB</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#" class="active">Dashboard Home</a></li>
+            <li><a href="#">Active Members</a></li>
+            <li><a href="#">NinjaBucks Tracker</a></li>
+            <li><a href="#">Boss Battle Area</a></li>
+            <li><a href="#">Settings / Inactive</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <h1>System Modules</h1>
+            <p>Welcome back, Sensei</p>
+        </header>
+
+        <div class="grid-container">
+            
+            <div class="card" onclick="alert('Navigating to Add Ninja Form')">
+                <span class="badge badge-action">Action</span>
+                <h2>Add Ninja</h2>
+                <p>Register a new ninja into the database and initialize their starting profile.</p>
+            </div>
+
+            <div class="card" onclick="alert('Navigating to Buttons Panel')">
+                <span class="badge badge-action">Action</span>
+                <h2>Buttons / Controls</h2>
+                <p>Quick-action macros to award NinjaBucks or trigger daily events.</p>
+            </div>
+
+            <div class="card" onclick="alert('Navigating to Update Progress')">
+                <span class="badge badge-action">Action</span>
+                <h2>Update Progress</h2>
+                <p>Log belt testing, rank advancements, and track curriculum milestones.</p>
+            </div>
+
+            <div class="card" onclick="alert('Navigating to Master Data Sheet')">
+                <span class="badge badge-data">Database</span>
+                <h2>Master Data</h2>
+                <p>The core repository containing all member statistics, history, and metadata.</p>
+            </div>
+
+            <div class="card" onclick="alert('Navigating to Progress Matrix')">
+                <span class="badge badge-data">Database</span>
+                <h2>Progress Matrix</h2>
+                <p>Visual overview of all ninjas and their current belt/degree status.</p>
+            </div>
+
+            <div class="card" onclick="alert('Navigating to NinjaBucks Ledger')">
+                <span class="badge badge-data">Database</span>
+                <h2>NinjaBucks Ledger</h2>
+                <p>Current balances, monthly income, and spending records for the economy.</p>
+            </div>
+
+            <div class="card" onclick="alert('Navigating to NB Log')">
+                <span class="badge badge-data">Logs</span>
+                <h2>NB Log (Active)</h2>
+                <p>Real-time transaction log for NinjaBucks given and spent today.</p>
+            </div>
+
+            <div class="card" onclick="alert('Navigating to Progress Log')">
+                <span class="badge badge-data">Logs</span>
+                <h2>Progress Log</h2>
+                <p>Historical timestamped records of all rank advancements and degree changes.</p>
+            </div>
+
+            <div class="card" onclick="alert('Navigating to Old NB Logs')">
+                <span class="badge badge-data">Logs</span>
+                <h2>Archive Logs</h2>
+                <p>Access historical transaction logs (Old NB Logs, Copies) for auditing.</p>
+            </div>
+
+            <div class="card" onclick="alert('Navigating to Boss Battle')">
+                <span class="badge badge-gamify">Event</span>
+                <h2>Boss Battle</h2>
+                <p>Track global boss HP, damage dealt by individual ninjas, and daily event stats.</p>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // Simple script to handle active state on sidebar links
+        const navLinks = document.querySelectorAll('.nav-links a');
+        
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                navLinks.forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
