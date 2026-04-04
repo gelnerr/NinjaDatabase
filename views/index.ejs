@@ -1,0 +1,366 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Ninjas Dashboard</title>
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="/css/bootstrap.min.css">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="/icons/bootstrap-icons.css">
+  <style>
+    :root {
+      --cn-blue: #358ebc;
+      --cn-blue-dark: #1e6a94;
+      --cn-blue-light: #e8f4fb;
+      --cn-black: #1a1a1a;
+      --cn-dark: #231f20;
+      --cn-gray: #f5f6f8;
+      --cn-gray2: #eaecf0;
+      --cn-border: #dde1e7;
+      --cn-text: #1a1a1a;
+      --cn-muted: #6b7280;
+      --cn-white: #ffffff;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+
+    .wrap { display:flex; min-height:100vh; background: var(--cn-gray); }
+
+    .sidebar {
+      width: 240px;
+      background: var(--cn-dark);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      color: white;
+    }
+    .logo-area {
+      padding: 18px 16px;
+      background: var(--cn-white);
+      border-bottom: 1px solid var(--cn-border);
+      text-align: center;
+    }
+    .logo-area img { 
+      height: 36px; 
+      display: block; 
+      margin: 0 auto;
+    }
+
+  .user-pill {
+    margin: 14px 12px;
+    padding: 9px 12px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .user-avatar {
+    width: 28px; height: 28px;
+    background: var(--cn-blue);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: white; flex-shrink: 0;
+  }
+  .user-name { color: #f0f0f0; font-size: 12px; font-weight: 500; }
+  .user-role { color: #8899aa; font-size: 10px; }
+
+  .nav-section { padding: 6px 10px; flex: 1; }
+  .nav-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #667788; padding: 10px 8px 6px; }
+  .nav-links { list-style: none; }
+  .nav-links li { margin-bottom: 2px; }
+  .nav-links li a {
+    display: flex; align-items: center;
+    padding: 10px 14px;
+    border-radius: 7px;
+    color: #99aabb;
+    text-decoration: none;
+    font-size: 13.5px;
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+  .nav-links li a:hover { background: rgba(255,255,255,0.07); color: #fff; }
+  .nav-links li a.active { background: var(--cn-blue); color: #fff; font-weight: 500; }
+  .nav-icon { 
+    font-size: 16px; 
+    width: 28px; 
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .main { flex: 1; padding: 24px 28px; overflow-y: auto; }
+
+  .topbar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; }
+  .topbar h1 { font-size: 20px; font-weight: 600; color: var(--cn-black); }
+  .topbar p { font-size: 12px; color: var(--cn-muted); margin-top: 3px; }
+  .date-badge {
+    background: var(--cn-white);
+    border: 1px solid var(--cn-border);
+    border-radius: 7px;
+    padding: 7px 13px;
+    font-size: 12px;
+    color: var(--cn-muted);
+    white-space: nowrap;
+  }
+
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+  .stat-card {
+    background: var(--cn-white);
+    border: 1px solid var(--cn-border);
+    border-radius: 10px;
+    padding: 15px 16px;
+    border-top: 3px solid var(--cn-blue);
+  }
+  .stat-card.accent-black { border-top-color: var(--cn-dark); }
+  .stat-card.accent-teal { border-top-color: #2a9d8f; }
+  .stat-card.accent-amber { border-top-color: #e09f00; }
+  .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--cn-muted); margin-bottom: 5px; }
+  .stat-value { font-size: 24px; font-weight: 600; color: var(--cn-black); }
+  .stat-sub { font-size: 11px; color: var(--cn-muted); margin-top: 3px; }
+
+  .section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; margin-top: 4px; }
+  .section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--cn-muted); }
+  .section-line { flex: 1; height: 1px; background: var(--cn-border); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px; }
+
+  .card {
+    background: var(--cn-white);
+    border: 1px solid var(--cn-border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .card:hover { border-color: var(--cn-blue); box-shadow: 0 2px 12px rgba(53,142,188,0.12); transform: translateY(-2px); }
+
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .card-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .icon-blue { background: var(--cn-blue-light); }
+  .icon-dark { background: #f0f0f2; }
+  .icon-teal { background: #e6f6f4; }
+  .icon-amber { background: #fef9e7; }
+
+  .card-badge {
+    font-size: 10px; font-weight: 600;
+    padding: 3px 7px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .badge-action { background: #e8f4fb; color: var(--cn-blue-dark); }
+  .badge-data { background: #f0f0f2; color:     #444; }
+  .badge-log { background: #fef9e7; color: #9a6e00; }
+  .badge-event { background: #e6f6f4; color: #1a7a72; }
+
+  .card h3 { font-size: 13px; font-weight: 600; color: var(--cn-black); }
+  .card p { font-size: 11.5px; color: var(--cn-muted); line-height: 1.5; }
+  .card-arrow { font-size: 12px; color: #ccc; transition: color 0.15s; }
+  .card:hover .card-arrow { color: var(--cn-blue); }
+
+  .boss-card {
+    background: var(--cn-dark);
+    border-radius: 10px;
+    padding: 18px 20px;
+    color: white;
+  }
+  .boss-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 13px; }
+  .boss-title { font-size: 13px; font-weight: 600; }
+  .boss-live { font-size: 10px; padding: 3px 8px; border-radius: 4px; background: rgba(53,142,188,0.25); color: #80ccf0; font-weight: 600; letter-spacing: 0.5px; }
+  .hp-label { font-size: 11px; color: #8899aa; margin-bottom: 6px; }
+  .hp-bar-bg { background: rgba(255,255,255,0.1); border-radius: 4px; height: 7px; overflow: hidden; }
+  .hp-bar { height: 7px; border-radius: 4px; background: var(--cn-blue); width: 62%; }
+  .hp-text { display: flex; justify-content: space-between; font-size: 11px; color: #8899aa; margin-top: 6px; }
+</style>
+
+<div class="wrap">
+  <aside class="sidebar">
+    <div class="logo-area">
+      <img src="/img/cn_logo.png" style="width: 100%; height: auto;">
+    </div>
+
+    <div class="user-pill">
+      <div class="user-avatar">S</div>
+      <div>
+        <div class="user-name">Sensei</div>
+        <div class="user-role">Staff · Active</div>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Navigation</div>
+      <ul class="nav-links">
+        <li><a href="#" class="active"><span class="nav-icon"><i class="bi bi-speedometer2"></i></span> Dashboard</a></li>
+        <li><a href="#"><span class="nav-icon"><i class="bi bi-people"></i></span> Active Members</a></li>
+        <li><a href="#"><span class="nav-icon"><i class="bi bi-coin"></i></span> NinjaBucks</a></li>
+        <li><a href="#"><span class="nav-icon"><i class="bi bi-sword"></i></span> Boss Battle</a></li>
+        <li><a href="#"><span class="nav-icon"><i class="bi bi-archive"></i></span> Archives</a></li>
+        <li><a href="#"><span class="nav-icon"><i class="bi bi-gear"></i></span> Settings</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Sensei Dashboard</h1>
+        <p>Track your ninjas' progress, rewards, and events</p>
+      </div>
+      <div class="date-badge" id="date-badge">Loading...</div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-label">Active Ninjas</div>
+        <div class="stat-value">48</div>
+        <div class="stat-sub">Checked in today</div>
+      </div>
+      <div class="stat-card accent-amber">
+        <div class="stat-label">NinjaBucks Today</div>
+        <div class="stat-value">1,240</div>
+        <div class="stat-sub">Awarded this session</div>
+      </div>
+      <div class="stat-card accent-teal">
+        <div class="stat-label">Belt Advancements</div>
+        <div class="stat-value">3</div>
+        <div class="stat-sub">This week</div>
+      </div>
+      <div class="stat-card accent-black">
+        <div class="stat-label">Boss HP Remaining</div>
+        <div class="stat-value">62%</div>
+        <div class="stat-sub">Today's event</div>
+      </div>
+    </div>
+
+    <div class="section-header"><div class="section-title">Actions</div><div class="section-line"></div></div>
+    <div class="grid">
+      <div class="card">
+        <div class="card-top">
+          <div class="card-icon icon-blue">➕</div>
+          <span class="card-badge badge-action">Action</span>
+        </div>
+        <h3>Add Ninja</h3>
+        <p>Register a new ninja and initialize their starting profile.</p>
+        <div class="card-arrow">→</div>
+      </div>
+      <div class="card">
+        <div class="card-top">
+          <div class="card-icon icon-blue">⚡</div>
+          <span class="card-badge badge-action">Action</span>
+        </div>
+        <h3>Buttons / Controls</h3>
+        <p>Quick-action macros to award NinjaBucks or trigger events.</p>
+        <div class="card-arrow">→</div>
+      </div>
+      <div class="card">
+        <div class="card-top">
+          <div class="card-icon icon-blue">🥋</div>
+          <span class="card-badge badge-action">Action</span>
+        </div>
+        <h3>Update Progress</h3>
+        <p>Log belt tests, rank advancements, and curriculum milestones.</p>
+        <div class="card-arrow">→</div>
+      </div>
+    </div>
+
+    <div class="section-header"><div class="section-title">Database</div><div class="section-line"></div></div>
+    <div class="grid">
+      <div class="card">
+        <div class="card-top">
+          <div class="card-icon icon-dark">◧</div>
+          <span class="card-badge badge-data">Database</span>
+        </div>
+        <h3>Master Data</h3>
+        <p>All member stats, history, and metadata in one place.</p>
+        <div class="card-arrow">→</div>
+      </div>
+      <div class="card">
+        <div class="card-top">
+          <div class="card-icon icon-dark">▦</div>
+          <span class="card-badge badge-data">Database</span>
+        </div>
+        <h3>Progress Matrix</h3>
+        <p>Visual overview of all ninjas' current belt and degree status.</p>
+        <div class="card-arrow">→</div>
+      </div>
+      <div class="card">
+        <div class="card-top">
+          <div class="card-icon icon-dark">◎</div>
+          <span class="card-badge badge-data">Database</span>
+        </div>
+        <h3>NinjaBucks Ledger</h3>
+        <p>Balances, monthly income, and spending records.</p>
+        <div class="card-arrow">→</div>
+      </div>
+    </div>
+
+    <div class="section-header"><div class="section-title">Logs & Events</div><div class="section-line"></div></div>
+    <div class="grid">
+      <div class="card">
+        <div class="card-top">
+          <div class="card-icon icon-amber">📋</div>
+          <span class="card-badge badge-log">Log</span>
+        </div>
+        <h3>NB Log (Active)</h3>
+        <p>Real-time NinjaBucks transactions for today's session.</p>
+        <div class="card-arrow">→</div>
+      </div>
+      <div class="card">
+        <div class="card-top">
+          <div class="card-icon icon-amber">📈</div>
+          <span class="card-badge badge-log">Log</span>
+        </div>
+        <h3>Progress Log</h3>
+        <p>Timestamped history of all rank advancements and changes.</p>
+        <div class="card-arrow">→</div>
+      </div>
+      <div class="card">
+        <div class="card-top">
+          <div class="card-icon icon-amber">🗄</div>
+          <span class="card-badge badge-log">Log</span>
+        </div>
+        <h3>Archive Logs</h3>
+        <p>Historical transaction records for auditing past sessions.</p>
+        <div class="card-arrow">→</div>
+      </div>
+      <div class="card">
+        <div class="card-top">
+          <div class="card-icon icon-teal">⚔</div>
+          <span class="card-badge badge-event">Event</span>
+        </div>
+        <h3>Boss Battle</h3>
+        <p>Track boss HP, ninja damage dealt, and daily event stats.</p>
+        <div class="card-arrow">→</div>
+      </div>
+    </div>
+
+    <div class="boss-card">
+      <div class="boss-header">
+        <span class="boss-title">Today's Boss Battle</span>
+        <span class="boss-live">● Live</span>
+      </div>
+      <div class="hp-label">Boss HP — 62% remaining</div>
+      <div class="hp-bar-bg"><div class="hp-bar"></div></div>
+      <div class="hp-text"><span>38% damage dealt by ninjas</span><span>Session active</span></div>
+    </div>
+  </main>
+</div>
+
+<script>
+  const d = new Date();
+  document.getElementById('date-badge').textContent = d.toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'});
+  document.querySelectorAll('.nav-links a').forEach(a=>{
+    a.addEventListener('click',function(e){
+      e.preventDefault();
+      document.querySelectorAll('.nav-links a').forEach(x=>x.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+</script>
