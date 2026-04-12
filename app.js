@@ -19,36 +19,46 @@ const connectDB = async () => {
   
   const MONGODB_URI = process.env.MONGODB_URI;
   if (!MONGODB_URI) {
-    throw new Error('MONGODB_URI environment variable is missing!');
+    throw new Error('MONGODB_URI environment variable is missing in Vercel settings!');
+  }
+
+  if (MONGODB_URI.includes('<password>')) {
+    throw new Error('MONGODB_URI still contains the <password> placeholder!');
   }
 
   console.log('Connecting to MongoDB...');
-  cachedDb = await mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 5000,
-    bufferCommands: false, // Disable buffering
-  });
-  console.log('Connected to MongoDB!');
-  
-  // One-time migration logic
-  const userCount = await User.countDocuments();
-  const jsonPath = path.join(__dirname, 'data/users.json');
-  if (userCount === 0 && fs.existsSync(jsonPath)) {
-    console.log('Migrating users from users.json to MongoDB...');
-    const users = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-    await User.insertMany(users);
+  try {
+    cachedDb = await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+      bufferCommands: false,
+    });
+    console.log('Connected to MongoDB!');
+    
+    // One-time migration logic
+    const userCount = await User.countDocuments();
+    const jsonPath = path.join(__dirname, 'data/users.json');
+    if (userCount === 0 && fs.existsSync(jsonPath)) {
+      console.log('Migrating users from users.json to MongoDB...');
+      const users = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+      await User.insertMany(users);
+    }
+    
+    return cachedDb;
+  } catch (err) {
+    console.error('Mongoose Connect Error:', err.message);
+    throw err;
   }
-  
-  return cachedDb;
 };
 
 // Middleware to ensure DB is connected
 app.use(async (req, res, next) => {
+  // Skip DB check for static files if needed, but here we'll just try to connect
   try {
     await connectDB();
     next();
   } catch (err) {
     console.error('DB Connection Middleware Error:', err.message);
-    res.status(500).send('Database Connection Error');
+    res.status(500).send(`Database Connection Error: ${err.message}`);
   }
 });
 
@@ -71,14 +81,14 @@ app.use(session({
   cookie: { maxAge: 1000 * 60 * 60 * 24 } // 24 hours
 }));
 
-// Set EJS - Using absolute paths for Vercel
+// Set EJS
 app.set('view engine', 'ejs');
 app.set('views', path.join(process.cwd(), 'views'));
 
 // Multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, '/tmp'); // Use Vercel's /tmp directory for temporary uploads
+    cb(null, '/tmp');
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + '-' + file.originalname);
@@ -90,18 +100,7 @@ const upload = multer({ storage: storage });
 const getDashboardData = async () => {
   let data = await Dashboard.findOne();
   if (!data) {
-    const dataDir = path.join(__dirname, 'data');
-    const jsonPath = path.join(dataDir, 'dashboard.json');
-    if (fs.existsSync(dataDir) && fs.existsSync(jsonPath)) {
-      try {
-        const jsonData = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-        data = await Dashboard.create(jsonData);
-      } catch (err) {
-        data = await Dashboard.create({});
-      }
-    } else {
-      data = await Dashboard.create({});
-    }
+    data = await Dashboard.create({});
   }
   return data;
 };
@@ -114,11 +113,7 @@ const syncGoogleSheets = async (data) => {
     scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
   };
 
-  const credPath = path.join(__dirname, 'credentials.json');
-  
-  if (fs.existsSync(credPath)) {
-    authConfig.keyFile = credPath;
-  } else if (process.env.GOOGLE_CREDENTIALS) {
+  if (process.env.GOOGLE_CREDENTIALS) {
     try {
       const creds = process.env.GOOGLE_CREDENTIALS.trim();
       if (creds.startsWith('{')) {
@@ -186,7 +181,7 @@ app.get('/ninjabucks', async (req, res) => {
     });
   } catch (error) {
     console.error('Ninjabucks page error:', error.message);
-    res.status(500).send('Internal Server Error');
+    res.status(500).send(`Internal Error: ${error.message}`);
   }
 });
 
@@ -195,7 +190,8 @@ app.get('/', async (req, res) => {
     const data = await getDashboardData();
     res.render('dashboard', data);
   } catch (error) {
-    res.status(500).send('Internal Server Error');
+    console.error('Dashboard root error:', error.message);
+    res.status(500).send(`Internal Error: ${error.message}`);
   }
 });
 
@@ -241,8 +237,6 @@ app.post('/admin/update-ninjabucks-config', isAuthenticated, async (req, res) =>
 app.post('/admin/update-dashboard', isAuthenticated, upload.any(), async (req, res) => {
   const data = await getDashboardData();
   const body = req.body;
-  
-  // Note: File uploads to /tmp won't persist on Vercel
   
   const activitiesThisWeek = [];
   let i = 0;
@@ -310,7 +304,7 @@ app.post('/login', async (req, res) => {
     }
     res.render('login', { error: 'Invalid username or password' });
   } catch (error) {
-    res.render('login', { error: 'A server error occurred.' });
+    res.render('login', { error: `Auth Error: ${error.message}` });
   }
 });
 
@@ -319,10 +313,15 @@ app.get('/logout', (req, res) => {
   res.redirect('/');
 });
 
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', db: mongoose.connection.readyState });
+});
+
 // Final error handler
 app.use((err, req, res, next) => {
-  console.error('Unhandled Error:', err);
-  res.status(500).send('Internal Server Error');
+  console.error('Global Error:', err);
+  res.status(500).send(`Something broke: ${err.message}`);
 });
 
 const PORT = process.env.PORT || 3000;
