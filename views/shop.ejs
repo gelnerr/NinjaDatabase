@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ninja Shop - Code Ninjas</title>
+  <link rel="stylesheet" href="/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/icons/bootstrap-icons.css">
+  <style>
+    :root {
+      --cn-blue: #358ebc;
+      --cn-dark: #231f20;
+      --cn-gray: #f5f6f8;
+    }
+    body { background-color: var(--cn-gray); font-family: 'Segoe UI', sans-serif; }
+    .sidebar {
+      width: 240px; background: var(--cn-dark); min-height: 100vh; color: white; position: fixed;
+    }
+    .main { padding: 40px; }
+    .with-sidebar { margin-left: 240px; }
+    .no-sidebar { max-width: 1100px; margin: 0 auto; }
+    
+    .nav-link { color: #99aabb; padding: 12px 20px; border-radius: 8px; margin: 4px 10px; }
+    .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.1); color: white; }
+    .nav-link.active { background: var(--cn-blue); }
+    
+    .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .price-tag { background: #e8f4fb; color: var(--cn-blue); font-weight: 700; border-radius: 6px; padding: 4px 10px; }
+    .btn-back { border-radius: 20px; font-weight: 600; padding: 8px 20px; }
+    .category-title { font-weight: 700; color: var(--cn-dark); border-bottom: 2px solid var(--cn-blue); display: inline-block; padding-bottom: 5px; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <% if (locals.user) { %>
+    <!-- Admin Sidebar -->
+    <div class="sidebar">
+      <div class="p-4 text-center">
+        <img src="/img/cn_logo.png" height="30" alt="Code Ninjas">
+      </div>
+      <div class="mt-4">
+        <a href="/admin" class="nav-link d-block"><i class="bi bi-speedometer2 me-2"></i> Dashboard Home</a>
+        <a href="/admin/dashboard-editor" class="nav-link d-block"><i class="bi bi-pencil-square me-2"></i> Edit Ninja Dashboard</a>
+        <a href="/admin/ninjabucks-editor" class="nav-link d-block"><i class="bi bi-currency-dollar me-2"></i> Edit Ninja Bucks</a>
+        <a href="/ninjabucks" class="nav-link d-block"><i class="bi bi-coin me-2"></i> Ninja Bucks</a>
+        <a href="/shop" class="nav-link d-block active"><i class="bi bi-cart4 me-2"></i> Ninja Shop</a>
+        <a href="/" target="_blank" class="nav-link d-block"><i class="bi bi-eye-fill me-2"></i> View Ninja Dashboard</a>
+        <a href="/logout" class="nav-link d-block mt-4 text-danger"><i class="bi bi-box-arrow-right me-2"></i> Logout</a>
+      </div>
+    </div>
+  <% } %>
+
+  <main class="main <%= locals.user ? 'with-sidebar' : 'no-sidebar' %>">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <% if (!locals.user) { %>
+          <div class="d-flex gap-2 mb-3">
+            <a href="/" class="btn btn-outline-secondary btn-sm btn-back"><i class="bi bi-arrow-left me-1"></i> Dashboard</a>
+            <a href="/ninjabucks" class="btn btn-outline-primary btn-sm btn-back"><i class="bi bi-coin me-1"></i> Ninja Bucks</a>
+          </div>
+        <% } %>
+        <h2 class="fw-bold mb-1">Ninja Shop</h2>
+        <p class="text-muted">Spend your hard-earned Ninja Bucks here!</p>
+      </div>
+    </div>
+
+    <%- include('partials/earn-info') %>
+
+    <% 
+      const categories = [...new Set(shopItems.map(item => item.category || 'General'))].sort();
+      categories.forEach(cat => {
+        const items = shopItems
+          .filter(i => (i.category || 'General') === cat)
+          .sort((a, b) => a.price - b.price);
+    %>
+      <div class="mb-5">
+        <h4 class="category-title"><%= cat %></h4>
+        <div class="row g-4">
+          <% items.forEach(item => { %>
+            <div class="col-md-4 col-sm-6">
+              <div class="card h-100 p-3 text-center">
+                <div class="mb-3">
+                  <i class="bi bi-box-seam text-primary" style="font-size: 2.5rem;"></i>
+                </div>
+                <h5 class="fw-bold mb-2"><%= item.name %></h5>
+                <div>
+                  <span class="price-tag"><i class="bi bi-coin me-1"></i> <%= item.price %> Bucks</span>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    <% }) %>
+
+    <% if (shopItems.length === 0) { %>
+      <div class="text-center py-5">
+        <i class="bi bi-shop text-muted" style="font-size: 4rem;"></i>
+        <h4 class="text-muted mt-3">The shop is currently being restocked!</h4>
+        <p class="text-muted">Check back later for cool items.</p>
+      </div>
+    <% } %>
+  </main>
+
+  <script src="/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

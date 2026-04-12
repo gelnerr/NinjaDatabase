@@ -17,6 +17,12 @@ const ninjaOfTheMonthSchema = new mongoose.Schema({
   image: String
 });
 
+const shopItemSchema = new mongoose.Schema({
+  name: String,
+  price: Number,
+  category: String
+});
+
 const dashboardSchema = new mongoose.Schema({
   theme: { type: String, default: 'classic' },
   activitiesThisWeek: [activitySchema],
@@ -30,7 +36,11 @@ const dashboardSchema = new mongoose.Schema({
   senseiVotingLink: String,
   spreadsheetId: String,
   spreadsheetRange: { type: String, default: 'Ninja Bucks!A2:C150' },
+  monthlyRange: { type: String, default: 'Ninja Bucks!E2:F6' },
+  shopRange: { type: String, default: 'Shop!A2:C50' },
   leaderboard: Array,
+  monthlyLeaderboard: Array,
+  shopItems: [shopItemSchema],
   lastUpdated: { type: Date, default: Date.now }
 });
 

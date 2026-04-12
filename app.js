@@ -126,18 +126,24 @@ const syncGoogleSheets = async (data) => {
     scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
   };
 
+  const credPath = path.join(__dirname, 'credentials.json');
   if (process.env.GOOGLE_CREDENTIALS) {
     try {
       const creds = process.env.GOOGLE_CREDENTIALS.trim();
       if (creds.startsWith('{')) {
         authConfig.credentials = JSON.parse(creds);
       } else {
+        console.error('GOOGLE_CREDENTIALS environment variable is not valid JSON.');
         return 0;
       }
     } catch (e) {
+      console.error('Error parsing GOOGLE_CREDENTIALS:', e.message);
       return 0;
     }
+  } else if (fs.existsSync(credPath)) {
+    authConfig.keyFilename = credPath;
   } else {
+    console.error('No Google credentials found (environment variable or credentials.json).');
     return 0;
   }
 
@@ -156,21 +162,50 @@ const syncGoogleSheets = async (data) => {
     const fullData = rows
       .filter(row => row.length >= 2)
       .map(row => {
-        let name, total;
-        if (row.length >= 3) { name = row[1]; total = row[2]; }
-        else { name = row[0]; total = row[1]; }
+        let name, total, monthly;
+        if (row.length >= 3) {
+          // If 3 columns: Name, Total, Monthly
+          name = row[0];
+          total = row[1];
+          monthly = row[2];
+        } else {
+          // If only 2 columns: Name, Total
+          name = row[0];
+          total = row[1];
+          monthly = 0;
+        }
 
         if (!name || name.toLowerCase().trim() === 'ninja name') return null;
 
         return {
           name: name.trim(),
           total: parseInt(total ? total.toString().replace(/,/g, '') : '0') || 0,
-          monthly: 0
+          monthly: parseInt(monthly ? monthly.toString().replace(/,/g, '') : '0') || 0
         };
       })
       .filter(n => n !== null);
 
     data.leaderboard = fullData;
+
+    // --- Sync Monthly Top Earners ---
+    try {
+      const monthlyResponse = await sheets.spreadsheets.values.get({
+        spreadsheetId: data.spreadsheetId,
+        range: data.monthlyRange || 'Ninja Bucks!E2:F6',
+      });
+      const monthlyRows = monthlyResponse.data.values;
+      if (monthlyRows && monthlyRows.length > 0) {
+        data.monthlyLeaderboard = monthlyRows
+          .filter(row => row.length >= 2)
+          .map(row => ({
+            name: row[0].trim(),
+            monthly: parseInt(row[1] ? row[1].toString().replace(/,/g, '') : '0') || 0
+          }));
+      }
+    } catch (monthlyErr) {
+      console.error('Monthly Sync Error:', monthlyErr.message);
+    }
+
     data.lastUpdated = new Date();
     await data.save();
     return fullData.length;
@@ -189,11 +224,28 @@ app.get('/ninjabucks', async (req, res) => {
     const updatedData = await getDashboardData();
     res.render('ninjabucks', { 
       leaderboard: updatedData.leaderboard || [],
+      monthlyLeaderboard: updatedData.monthlyLeaderboard || [],
       theme: updatedData.theme || 'classic',
       user: req.session.user
     });
   } catch (error) {
     console.error('Ninjabucks page error:', error.message);
+    res.status(500).send(`Internal Error: ${error.message}`);
+  }
+});
+
+app.get('/shop', async (req, res) => {
+  try {
+    const data = await getDashboardData();
+    // Only sync leaderboard if needed, shop is now manual
+    await syncGoogleSheets(data);
+    const updatedData = await getDashboardData();
+    res.render('shop', { 
+      shopItems: updatedData.shopItems || [],
+      user: req.session.user
+    });
+  } catch (error) {
+    console.error('Shop page error:', error.message);
     res.status(500).send(`Internal Error: ${error.message}`);
   }
 });
@@ -268,11 +320,37 @@ app.get('/admin/ninjabucks-editor', isAuthenticated, async (req, res) => {
 
 app.post('/admin/update-ninjabucks-config', isAuthenticated, async (req, res) => {
   const data = await getDashboardData();
-  const { spreadsheetId, spreadsheetRange } = req.body;
+  const { spreadsheetId, spreadsheetRange, monthlyRange, shopRange } = req.body;
   data.spreadsheetId = spreadsheetId || data.spreadsheetId;
   data.spreadsheetRange = spreadsheetRange || data.spreadsheetRange;
+  data.monthlyRange = monthlyRange || data.monthlyRange;
+  data.shopRange = shopRange || data.shopRange;
   await data.save();
   res.redirect('/admin/ninjabucks-editor');
+});
+
+app.get('/admin/shop-editor', isAuthenticated, async (req, res) => {
+  const data = await getDashboardData();
+  res.render('shop-editor', { data });
+});
+
+app.post('/admin/update-shop', isAuthenticated, async (req, res) => {
+  const data = await getDashboardData();
+  const body = req.body;
+  
+  const shopItems = [];
+  let k = 0;
+  while (body[`shop_name_${k}`] !== undefined) {
+    shopItems.push({
+      name: body[`shop_name_${k}`],
+      price: parseInt(body[`shop_price_${k}`]) || 0,
+      category: body[`shop_category_${k}`] || 'General'
+    });
+    k++;
+  }
+  data.shopItems = shopItems;
+  await data.save();
+  res.redirect('/admin/shop-editor');
 });
 
 app.post('/admin/update-dashboard', isAuthenticated, upload.any(), async (req, res) => {
