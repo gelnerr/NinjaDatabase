@@ -12,12 +12,22 @@ const User = require('./models/User');
 
 const app = express();
 
-// Database Connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ninja-database';
-mongoose.connect(MONGODB_URI)
-  .then(async () => {
+// Database Connection Helper
+let isConnected = false;
+const connectDB = async () => {
+  if (isConnected) return;
+  const MONGODB_URI = process.env.MONGODB_URI;
+  if (!MONGODB_URI) {
+    console.error('MONGODB_URI environment variable is missing!');
+    return;
+  }
+  try {
+    const db = await mongoose.connect(MONGODB_URI);
+    isConnected = db.connections[0].readyState;
     console.log('Connected to MongoDB!');
-    // Migrate users from JSON if MongoDB is empty
+    
+    // One-time migration logic
+    const User = require('./models/User');
     const userCount = await User.countDocuments();
     const jsonPath = path.join(__dirname, 'data/users.json');
     if (userCount === 0 && fs.existsSync(jsonPath)) {
@@ -25,8 +35,16 @@ mongoose.connect(MONGODB_URI)
       const users = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
       await User.insertMany(users);
     }
-  })
-  .catch(err => console.error('Database connection error:', err));
+  } catch (err) {
+    console.error('Database connection error:', err.message);
+  }
+};
+
+// Middleware (applied to all requests)
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
 
 // Middleware
 app.use(express.urlencoded({ extended: true }));
