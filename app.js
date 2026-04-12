@@ -20,7 +20,7 @@ const connectDB = async () => {
   
   const MONGODB_URI = process.env.MONGODB_URI;
   if (!MONGODB_URI) {
-    throw new Error('MONGODB_URI environment variable is missing in Vercel settings!');
+    throw new Error('MONGODB_URI environment variable is missing!');
   }
 
   if (MONGODB_URI.includes('<password>')) {
@@ -34,6 +34,16 @@ const connectDB = async () => {
       bufferCommands: false,
     });
     console.log('Connected to MongoDB!');
+    
+    // One-time migration logic
+    const userCount = await User.countDocuments();
+    const jsonPath = path.join(__dirname, 'data/users.json');
+    if (userCount === 0 && fs.existsSync(jsonPath)) {
+      console.log('Migrating users from users.json to MongoDB...');
+      const users = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+      await User.insertMany(users);
+    }
+    
     return cachedDb;
   } catch (err) {
     console.error('Mongoose Connect Error:', err.message);
@@ -64,18 +74,21 @@ app.use('/js', express.static(path.join(__dirname, 'node_modules/bootstrap/dist/
 app.use('/icons', express.static(path.join(__dirname, 'node_modules/bootstrap-icons/font')));
 
 // Session setup with persistent MongoStore
+// We use a getter or a fallback to handle MongoStore initialization variants
+const mongoStoreInstance = (process.env.MONGODB_URI) ? MongoStore.create({
+  mongoUrl: process.env.MONGODB_URI,
+  ttl: 14 * 24 * 60 * 60,
+  autoRemove: 'native'
+}) : null;
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'ninja-secret-key-123',
   resave: false,
   saveUninitialized: false,
   proxy: true,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI,
-    ttl: 14 * 24 * 60 * 60, // 14 days
-    autoRemove: 'native'
-  }),
+  store: mongoStoreInstance,
   cookie: { 
-    maxAge: 1000 * 60 * 60 * 24, // 24 hours
+    maxAge: 1000 * 60 * 60 * 24,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax'
   }
@@ -190,7 +203,6 @@ app.get('/', async (req, res) => {
     const data = await getDashboardData();
     res.render('dashboard', data);
   } catch (error) {
-    console.error('Dashboard root error:', error.message);
     res.status(500).send(`Internal Error: ${error.message}`);
   }
 });
@@ -200,6 +212,35 @@ const isAuthenticated = (req, res, next) => {
   if (req.session.user) return next();
   res.redirect('/login');
 };
+
+// Emergency Setup Route
+app.get('/admin/setup', async (req, res) => {
+  try {
+    const { username, password } = req.query;
+    const targetUser = username || 'sensei';
+    const targetPass = password || 'password123';
+    
+    const hashedPassword = bcrypt.hashSync(targetPass, 10);
+    
+    await User.findOneAndUpdate(
+      { username: targetUser },
+      { passwordHash: hashedPassword, role: 'admin' },
+      { upsert: true, new: true }
+    );
+
+    let message = `User '${targetUser}' is ready. `;
+
+    const dashboardCount = await Dashboard.countDocuments();
+    if (dashboardCount === 0) {
+      await Dashboard.create({ theme: 'classic' });
+      message += "Default dashboard initialized. ";
+    }
+    
+    res.send(`<h3>Setup Successful</h3><p>${message}</p><a href='/login'>Go to Login</a>`);
+  } catch (error) {
+    res.status(500).send("Setup failed: " + error.message);
+  }
+});
 
 app.post('/admin/sync-leaderboard', isAuthenticated, async (req, res) => {
   try {
@@ -246,8 +287,7 @@ app.post('/admin/update-dashboard', isAuthenticated, upload.any(), async (req, r
       link: body[`activitiesThisWeek_link_${i}`],
       image: data.activitiesThisWeek[i] ? data.activitiesThisWeek[i].image : "/img/cn_logo.png"
     };
-    const urlImg = body[`activitiesThisWeek_url_${i}`];
-    if (urlImg) act.image = urlImg;
+    if (body[`activitiesThisWeek_url_${i}`]) act.image = body[`activitiesThisWeek_url_${i}`];
     activitiesThisWeek.push(act);
     i++;
   }
@@ -261,8 +301,7 @@ app.post('/admin/update-dashboard', isAuthenticated, upload.any(), async (req, r
       link: body[`activitiesNextWeek_link_${j}`],
       image: data.activitiesNextWeek[j] ? data.activitiesNextWeek[j].image : "/img/cn_logo.png"
     };
-    const urlImg = body[`activitiesNextWeek_url_${j}`];
-    if (urlImg) act.image = urlImg;
+    if (body[`activitiesNextWeek_url_${j}`]) act.image = body[`activitiesNextWeek_url_${j}`];
     activitiesNextWeek.push(act);
     j++;
   }
@@ -290,43 +329,6 @@ app.post('/admin/update-dashboard', isAuthenticated, upload.any(), async (req, r
   res.redirect('/admin/dashboard-editor');
 });
 
-// Emergency Setup Route (Use this to reset admin or add new senseis)
-// Usage: /admin/setup OR /admin/setup?username=newuser&password=newpassword
-app.get('/admin/setup', async (req, res) => {
-  try {
-    const { username, password } = req.query;
-    const targetUser = username || 'sensei';
-    const targetPass = password || 'password123';
-    
-    const hashedPassword = bcrypt.hashSync(targetPass, 10);
-    
-    // Upsert user (Update if exists, Create if not)
-    await User.findOneAndUpdate(
-      { username: targetUser },
-      { passwordHash: hashedPassword, role: 'admin' },
-      { upsert: true, new: true }
-    );
-
-    let message = `User '${targetUser}' is ready with password '${targetPass}'. `;
-
-    const dashboardCount = await Dashboard.countDocuments();
-    if (dashboardCount === 0) {
-      await Dashboard.create({
-        theme: 'classic',
-        activitiesThisWeek: [],
-        activitiesNextWeek: [],
-        specialEvents: [],
-        ninjasOfTheMonth: []
-      });
-      message += "Default dashboard initialized. ";
-    }
-    
-    res.send(`<h3>Setup Successful</h3><p>${message}</p><a href='/login'>Go to Login</a>`);
-  } catch (error) {
-    res.status(500).send("Setup failed: " + error.message);
-  }
-});
-
 app.get('/login', (req, res) => {
   res.render('login', { error: null });
 });
@@ -348,11 +350,6 @@ app.post('/login', async (req, res) => {
 app.get('/logout', (req, res) => {
   req.session.destroy();
   res.redirect('/');
-});
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', db: mongoose.connection.readyState });
 });
 
 // Final error handler
