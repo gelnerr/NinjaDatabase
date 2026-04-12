@@ -7,6 +7,7 @@ const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const { google } = require('googleapis');
 const mongoose = require('mongoose');
+const MongoStore = require('connect-mongo');
 const Dashboard = require('./models/Dashboard');
 const User = require('./models/User');
 
@@ -33,16 +34,6 @@ const connectDB = async () => {
       bufferCommands: false,
     });
     console.log('Connected to MongoDB!');
-    
-    // One-time migration logic
-    const userCount = await User.countDocuments();
-    const jsonPath = path.join(__dirname, 'data/users.json');
-    if (userCount === 0 && fs.existsSync(jsonPath)) {
-      console.log('Migrating users from users.json to MongoDB...');
-      const users = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-      await User.insertMany(users);
-    }
-    
     return cachedDb;
   } catch (err) {
     console.error('Mongoose Connect Error:', err.message);
@@ -52,7 +43,6 @@ const connectDB = async () => {
 
 // Middleware to ensure DB is connected
 app.use(async (req, res, next) => {
-  // Skip DB check for static files if needed, but here we'll just try to connect
   try {
     await connectDB();
     next();
@@ -73,14 +63,19 @@ app.use('/css', express.static(path.join(__dirname, 'node_modules/bootstrap/dist
 app.use('/js', express.static(path.join(__dirname, 'node_modules/bootstrap/dist/js')));
 app.use('/icons', express.static(path.join(__dirname, 'node_modules/bootstrap-icons/font')));
 
-// Session setup
+// Session setup with persistent MongoStore
 app.use(session({
   secret: process.env.SESSION_SECRET || 'ninja-secret-key-123',
   resave: false,
   saveUninitialized: false,
   proxy: true,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI,
+    ttl: 14 * 24 * 60 * 60, // 14 days
+    autoRemove: 'native'
+  }),
   cookie: { 
-    maxAge: 1000 * 60 * 60 * 24,
+    maxAge: 1000 * 60 * 60 * 24, // 24 hours
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax'
   }
