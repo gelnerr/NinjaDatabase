@@ -83,19 +83,29 @@ const getDashboardData = async () => {
 const syncGoogleSheets = async (data) => {
   if (!data.spreadsheetId) return 0;
 
+  let authConfig = {
+    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+  };
+
   const credPath = path.join(__dirname, 'credentials.json');
-  if (!fs.existsSync(credPath)) {
-    // Support for providing credentials via environment variable for Vercel/Netlify
-    if (!process.env.GOOGLE_CREDENTIALS) throw new Error('Google Credentials not found');
-    fs.writeFileSync(credPath, process.env.GOOGLE_CREDENTIALS);
+  
+  if (fs.existsSync(credPath)) {
+    authConfig.keyFile = credPath;
+  } else if (process.env.GOOGLE_CREDENTIALS) {
+    // If no file, parse the JSON from environment variable directly
+    try {
+      authConfig.credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+    } catch (e) {
+      console.error('Error parsing GOOGLE_CREDENTIALS env var:', e.message);
+      throw new Error('Invalid GOOGLE_CREDENTIALS format');
+    }
+  } else {
+    throw new Error('Google Credentials not found (file or env var)');
   }
 
-  const auth = new google.auth.GoogleAuth({
-    keyFile: credPath,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-  });
-
+  const auth = new google.auth.GoogleAuth(authConfig);
   const sheets = google.sheets({ version: 'v4', auth });
+  
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: data.spreadsheetId,
     range: data.spreadsheetRange || 'Ninja Bucks!A2:C150',
