@@ -25,6 +25,7 @@ const connectDB = async () => {
   console.log('Connecting to MongoDB...');
   cachedDb = await mongoose.connect(MONGODB_URI, {
     serverSelectionTimeoutMS: 5000,
+    bufferCommands: false, // Disable buffering
   });
   console.log('Connected to MongoDB!');
   
