@@ -314,11 +314,18 @@ app.post('/admin/update-dashboard', isAuthenticated, upload.any(), async (req, r
 
   data.notmMonth = body.notmMonth || data.notmMonth;
   data.notmColor = body.notmColor || data.notmColor;
-  data.ninjasOfTheMonth.forEach((ninja, idx) => {
-    ninja.name = body[`notm_name_${idx}`] || ninja.name;
-    ninja.type = body[`notm_type_${idx}`] || ninja.type;
-    ninja.image = `/img/notm/${ninja.type}.png`;
-  });
+  
+  const ninjasOfTheMonth = [];
+  let k = 0;
+  while (body[`notm_name_${k}`] !== undefined) {
+    ninjasOfTheMonth.push({
+      name: body[`notm_name_${k}`],
+      type: body[`notm_type_${k}`],
+      image: `/img/notm/${body[`notm_type_${k}`]}.png`
+    });
+    k++;
+  }
+  data.ninjasOfTheMonth = ninjasOfTheMonth;
 
   data.theme = body.theme || data.theme;
   data.funFact = body.funFact || data.funFact;

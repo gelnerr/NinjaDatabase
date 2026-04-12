@@ -42,6 +42,20 @@
     <h2 class="mb-4">Ninja Dashboard Editor</h2>
     <p class="text-muted">Update the content shown on the kid-friendly dashboard.</p>
 
+    <% 
+      const types = [
+        { id: 'challenge', label: 'Challenge' },
+        { id: 'collector', label: 'Collector' },
+        { id: 'creative', label: 'Creative' },
+        { id: 'focused', label: 'Focused' },
+        { id: 'friendly', label: 'Friendly' },
+        { id: 'helpful', label: 'Helpful' },
+        { id: 'scholar', label: 'Scholar' },
+        { id: 'skillful', label: 'Skillful' },
+        { id: 'surprise_ninja', label: 'Surprise Ninja' }
+      ];
+    %>
+
     <form action="/admin/update-dashboard" method="POST" enctype="multipart/form-data">
       
       <!-- Theme Selection -->
@@ -188,7 +202,10 @@
 
       <!-- Ninjas of the Month -->
       <div class="card p-4">
-        <h5 class="section-title"><i class="bi bi-trophy"></i> Ninjas of the Month</h5>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="section-title mb-0"><i class="bi bi-trophy"></i> Ninjas of the Month</h5>
+          <button type="button" class="btn btn-sm btn-outline-primary" onclick="addNinja()"><i class="bi bi-plus-lg"></i> Add Ninja</button>
+        </div>
         
         <div class="row mb-4">
           <div class="col-md-6">
@@ -201,23 +218,13 @@
           </div>
         </div>
 
-        <div class="row">
-          <% 
-            const types = [
-              { id: 'challenge', label: 'Challenge' },
-              { id: 'collector', label: 'Collector' },
-              { id: 'creative', label: 'Creative' },
-              { id: 'focused', label: 'Focused' },
-              { id: 'friendly', label: 'Friendly' },
-              { id: 'helpful', label: 'Helpful' },
-              { id: 'scholar', label: 'Scholar' },
-              { id: 'skillful', label: 'Skillful' },
-              { id: 'surprise_ninja', label: 'Surprise Ninja' }
-            ];
-          %>
+        <div class="row" id="notm-container">
           <% data.ninjasOfTheMonth.forEach((ninja, index) => { %>
-            <div class="col-md-4 mb-4">
-              <div class="border rounded p-3 bg-light">
+            <div class="col-md-4 mb-4 notm-item" data-index="<%= index %>">
+              <div class="border rounded p-3 bg-light position-relative">
+                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="removeNinja(this)" style="z-index: 10;">
+                  <i class="bi bi-trash"></i>
+                </button>
                 <div class="text-center mb-2">
                   <img src="/img/notm/<%= ninja.type %>.png" class="img-fluid rounded" style="height: 60px;" id="notm_img_<%= index %>">
                 </div>
@@ -246,6 +253,8 @@
   </main>
 
   <script>
+    const NOTM_TYPES = <%- JSON.stringify(types) %>;
+
     function syncLeaderboard() {
       const btn = event.currentTarget;
       const originalHtml = btn.innerHTML;
@@ -328,6 +337,61 @@
                 <label class="form-label small mb-1">Link</label>
                 <input type="text" name="${prefix}_link_${index}" class="form-control">
               </div>
+            </div>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', html);
+    }
+
+    function removeNinja(btn) {
+      const item = btn.closest('.notm-item');
+      item.remove();
+      reindexNinjas();
+    }
+
+    function reindexNinjas() {
+      const container = document.getElementById('notm-container');
+      const items = container.querySelectorAll('.notm-item');
+      items.forEach((item, i) => {
+        item.setAttribute('data-index', i);
+        const img = item.querySelector('img');
+        img.id = `notm_img_${i}`;
+        const nameInput = item.querySelector('input[type="text"]');
+        nameInput.setAttribute('name', `notm_name_${i}`);
+        const select = item.querySelector('select');
+        select.setAttribute('name', `notm_type_${i}`);
+        select.setAttribute('onchange', `document.getElementById('notm_img_${i}').src='/img/notm/'+this.value+'.png'`);
+      });
+    }
+
+    function addNinja() {
+      const container = document.getElementById('notm-container');
+      const index = container.querySelectorAll('.notm-item').length;
+      
+      let optionsHtml = '';
+      NOTM_TYPES.forEach(t => {
+        optionsHtml += `<option value="${t.id}">${t.label}</option>`;
+      });
+
+      const html = `
+        <div class="col-md-4 mb-4 notm-item" data-index="${index}">
+          <div class="border rounded p-3 bg-light position-relative">
+            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="removeNinja(this)" style="z-index: 10;">
+              <i class="bi bi-trash"></i>
+            </button>
+            <div class="text-center mb-2">
+              <img src="/img/notm/challenge.png" class="img-fluid rounded" style="height: 60px;" id="notm_img_${index}">
+            </div>
+            <div class="mb-2">
+              <label class="small text-muted">Ninja Name</label>
+              <input type="text" name="notm_name_${index}" value="" class="form-control form-control-sm">
+            </div>
+            <div>
+              <label class="small text-muted">Award Type</label>
+              <select name="notm_type_${index}" class="form-select form-select-sm" onchange="document.getElementById('notm_img_${index}').src='/img/notm/'+this.value+'.png'">
+                ${optionsHtml}
+              </select>
             </div>
           </div>
         </div>
