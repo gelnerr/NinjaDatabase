@@ -290,6 +290,42 @@ app.post('/admin/update-dashboard', isAuthenticated, upload.any(), async (req, r
   res.redirect('/admin/dashboard-editor');
 });
 
+// Emergency Setup Route (Use this if you can't log in or page is empty)
+app.get('/admin/setup', async (req, res) => {
+  try {
+    const userCount = await User.countDocuments();
+    let message = "";
+    if (userCount === 0) {
+      const hashedPassword = bcrypt.hashSync('password123', 10);
+      await User.create({
+        username: 'sensei',
+        passwordHash: hashedPassword,
+        role: 'admin'
+      });
+      message += "Default user 'sensei' with password 'password123' created. ";
+    } else {
+      message += "Users already exist. ";
+    }
+
+    const dashboardCount = await Dashboard.countDocuments();
+    if (dashboardCount === 0) {
+      await Dashboard.create({
+        theme: 'classic',
+        activitiesThisWeek: [],
+        activitiesNextWeek: [],
+        specialEvents: [],
+        ninjasOfTheMonth: []
+      });
+      message += "Default dashboard initialized. ";
+    } else {
+      message += "Dashboard already exists. ";
+    }
+    res.send(`${message} <br><br> <a href='/login'>Go to Login</a>`);
+  } catch (error) {
+    res.status(500).send("Setup failed: " + error.message);
+  }
+});
+
 app.get('/login', (req, res) => {
   res.render('login', { error: null });
 });
