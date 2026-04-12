@@ -214,7 +214,11 @@
       <div class="card p-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h5 class="section-title mb-0"><i class="bi bi-trophy"></i> Ninjas of the Month</h5>
-          <button type="button" class="btn btn-sm btn-outline-primary" onclick="addNinja()"><i class="bi bi-plus-lg"></i> Add Ninja</button>
+          <div>
+            <a href="/notm-archive" target="_blank" class="btn btn-sm btn-outline-secondary me-2"><i class="bi bi-archive"></i> View Archive</a>
+            <button type="button" class="btn btn-sm btn-outline-warning me-2" onclick="archiveCurrentMonth()"><i class="bi bi-save"></i> Archive Current Month</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addNinja()"><i class="bi bi-plus-lg"></i> Add Ninja</button>
+          </div>
         </div>
         
         <div class="row mb-4">
@@ -442,6 +446,31 @@
         </div>
       `;
       container.insertAdjacentHTML('beforeend', html);
+    }
+
+    function archiveCurrentMonth() {
+      if (!confirm('Are you sure you want to archive the current month? This will save the current list of Ninjas of the Month to the archive.')) return;
+      
+      const btn = event.currentTarget;
+      const originalHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Archiving...';
+
+      fetch('/admin/archive-notm', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            alert('Current month archived successfully!');
+            // Optional: Redirect to archive or stay on page
+          } else {
+            alert('Archive Error: ' + (data.error || 'Unknown error'));
+          }
+        })
+        .catch(err => alert('Network Error: ' + err.message))
+        .finally(() => {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        });
     }
   </script>
 </body>

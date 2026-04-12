@@ -31,6 +31,12 @@ const dashboardSchema = new mongoose.Schema({
   notmMonth: String,
   notmColor: { type: String, default: '#358ebc' },
   ninjasOfTheMonth: [ninjaOfTheMonthSchema],
+  notmArchive: [{
+    month: String,
+    color: String,
+    ninjas: [ninjaOfTheMonthSchema],
+    dateArchived: { type: Date, default: Date.now }
+  }],
   funFact: String,
   senseiOfMonth: String,
   senseiVotingLink: String,

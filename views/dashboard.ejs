@@ -176,6 +176,9 @@
       <a href="/belts" class="vote-btn ms-2" style="margin-top: 0; background: #2EC4B6; color: #000; box-shadow: 0 4px 0px #21968b; font-size: 1rem; padding: 8px 20px;">
         <i class="bi bi-trophy me-2"></i> BELTS TOTEM
       </a>
+      <a href="/notm-archive" class="vote-btn ms-2" style="margin-top: 0; background: #6D5BBA; color: #fff; box-shadow: 0 4px 0px #4a3d8a; font-size: 1rem; padding: 8px 20px;">
+        <i class="bi bi-archive me-2"></i> NOTM ARCHIVE
+      </a>
     </div>
     <div id="clock"></div>
   </div>
@@ -221,7 +224,10 @@
 
     <!-- Ninjas of the Month Section -->
     <div class="kid-card animated" style="animation-delay: -3s; grid-column: span 2; border-color: <%= notmColor %>; box-shadow: 0 10px 0px <%= notmColor %>;">
-      <h2 style="color: <%= notmColor %>;">Ninjas of the Month - <%= notmMonth %></h2>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 style="color: <%= notmColor %>; margin: 0;">Ninjas of the Month - <%= notmMonth %></h2>
+        <a href="/notm-archive" class="btn btn-sm text-white opacity-75" style="background: <%= notmColor %>; border-radius: 20px; font-weight: bold; text-decoration: none; padding: 5px 15px;">View Archive</a>
+      </div>
       <div class="ninja-month-container" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
         <% ninjasOfTheMonth.forEach(ninja => { %>
           <div class="text-center">

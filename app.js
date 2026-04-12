@@ -309,6 +309,18 @@ app.get('/belts', async (req, res) => {
   }
 });
 
+app.get('/notm-archive', async (req, res) => {
+  try {
+    const data = await getDashboardData();
+    res.render('notm-archive', { 
+      archive: data.notmArchive || [],
+      user: req.session.user
+    });
+  } catch (error) {
+    res.status(500).send(`Internal Error: ${error.message}`);
+  }
+});
+
 app.get('/', async (req, res) => {
   try {
     const data = await getDashboardData();
@@ -365,6 +377,64 @@ app.post('/admin/sync-leaderboard', isAuthenticated, async (req, res) => {
 
 app.get('/admin', isAuthenticated, (req, res) => {
   res.render('admin');
+});
+
+app.get('/admin/notm-archive-editor', isAuthenticated, async (req, res) => {
+  const data = await getDashboardData();
+  res.render('notm-archive-editor', { archive: data.notmArchive || [] });
+});
+
+app.post('/admin/update-notm-archive', isAuthenticated, async (req, res) => {
+  try {
+    const data = await getDashboardData();
+    const body = req.body;
+    
+    // Process the archive entries
+    const updatedArchive = [];
+    let m = 0;
+    
+    // We need to find how many archive entries were sent
+    // The keys are like archive_month_0, archive_month_1...
+    while (body[`archive_month_${m}`] !== undefined) {
+      // If marked for deletion, skip adding it to the new array
+      if (body[`archive_delete_${m}`] === 'true') {
+        m++;
+        continue;
+      }
+
+      const entryId = body[`archive_id_${m}`];
+      const originalEntry = data.notmArchive.id(entryId);
+      
+      const updatedEntry = {
+        _id: entryId,
+        month: body[`archive_month_${m}`],
+        color: body[`archive_color_${m}`],
+        dateArchived: originalEntry ? originalEntry.dateArchived : new Date(),
+        ninjas: []
+      };
+
+      // Process ninjas for this month
+      let n = 0;
+      while (body[`archive_ninja_name_${m}_${n}`] !== undefined) {
+        updatedEntry.ninjas.push({
+          name: body[`archive_ninja_name_${m}_${n}`],
+          type: body[`archive_ninja_type_${m}_${n}`],
+          image: `/img/notm/${body[`archive_ninja_type_${m}_${n}`]}.png`
+        });
+        n++;
+      }
+      
+      updatedArchive.push(updatedEntry);
+      m++;
+    }
+
+    data.notmArchive = updatedArchive;
+    await data.save();
+    res.redirect('/admin/notm-archive-editor');
+  } catch (error) {
+    console.error('Update NOTM Archive error:', error);
+    res.status(500).send(`Error updating archive: ${error.message}`);
+  }
 });
 
 app.get('/admin/dashboard-editor', isAuthenticated, async (req, res) => {
@@ -478,6 +548,40 @@ app.post('/admin/update-dashboard', isAuthenticated, upload.any(), async (req, r
 
   await data.save();
   res.redirect('/admin/dashboard-editor');
+});
+
+app.post('/admin/archive-notm', isAuthenticated, async (req, res) => {
+  try {
+    const data = await getDashboardData();
+    
+    if (!data.ninjasOfTheMonth || data.ninjasOfTheMonth.length === 0) {
+      return res.status(400).json({ success: false, error: 'No ninjas to archive.' });
+    }
+
+    const archiveEntry = {
+      month: data.notmMonth,
+      color: data.notmColor,
+      ninjas: data.ninjasOfTheMonth.map(n => ({
+        name: n.name,
+        type: n.type,
+        image: n.image
+      })),
+      dateArchived: new Date()
+    };
+
+    data.notmArchive.push(archiveEntry);
+    
+    // Clear current month after archiving? 
+    // Usually, you'd archive BEFORE setting up the new month.
+    // The user might want to keep the current one until they manually change it.
+    // Let's just archive for now.
+    
+    await data.save();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Archive NOTM error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 app.get('/login', (req, res) => {
