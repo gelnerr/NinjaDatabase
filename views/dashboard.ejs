@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Ninjas - Ninja Dashboard</title>
+  <link rel="stylesheet" href="/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/icons/bootstrap-icons.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <% if (theme === 'space') { %>
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --space-purple: #6D5BBA;
+        --space-cyan: #00D2FF;
+        --space-yellow: #FFD93D;
+        --space-blue: #4D96FF;
+        --space-dark: #1A1A2E;
+        --card-bg: rgba(255, 255, 255, 0.95);
+        --text-main: var(--space-dark);
+        --text-muted: #666;
+      }
+      body {
+        background-color: var(--space-dark);
+        background-image: radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px), radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px), radial-gradient(rgba(109, 91, 186, 0.2) 0%, transparent 70%);
+        background-size: 550px 550px, 350px 350px, 100% 100%;
+        color: var(--text-main);
+        font-family: 'Fredoka', sans-serif;
+      }
+      .header { background: rgba(255, 255, 255, 0.1); border-radius: 50px; border: 3px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); color: white; }
+      .kid-card { background: var(--card-bg); border: 6px solid var(--space-purple); border-radius: 30px; box-shadow: 0 10px 0px var(--space-purple); color: var(--text-main); }
+      .kid-card h2 { color: var(--space-cyan); font-family: 'Luckiest Guy'; -webkit-text-stroke: 1px var(--space-dark); }
+      .activity-item { background: #eefbff; border-radius: 20px; border: 2px dashed var(--space-blue); }
+      .activity-info a { color: var(--space-blue); background: white; box-shadow: 0 2px 0 var(--space-blue); }
+      .event-date { background: var(--space-cyan); color: var(--space-dark); border-radius: 10px; }
+      .ninja-month-img { border: 5px solid var(--space-yellow); border-radius: 50%; }
+      .vote-btn { background: var(--space-yellow); color: var(--space-dark); font-family: 'Luckiest Guy'; border-radius: 50px; box-shadow: 0 6px 0px #c9a500; }
+      #clock { font-family: 'Luckiest Guy'; color: white; text-shadow: 3px 3px 0px var(--space-purple); }
+      @keyframes float { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-15px) rotate(2deg); } }
+      .animated { animation: float 6s ease-in-out infinite; }
+      .text-muted-theme { color: var(--text-muted); }
+    </style>
+  <% } else if (theme === 'cyber') { %>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;600;800&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --tech-orange: #FF9F1C;
+        --tech-yellow: #FFBF00;
+        --tech-green: #2EC4B6;
+        --tech-bg: #011627;
+        --text-main: #FDFFFC;
+        --text-muted: #8899aa;
+      }
+      body {
+        background-color: var(--tech-bg);
+        background-image: linear-gradient(rgba(46, 196, 182, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(46, 196, 182, 0.05) 1px, transparent 1px);
+        background-size: 30px 30px;
+        color: var(--text-main);
+        font-family: 'Exo 2', sans-serif;
+      }
+      .header { background: rgba(255, 255, 255, 0.03); border-bottom: 2px solid var(--tech-green); }
+      .kid-card { background: rgba(1, 22, 39, 0.85); border: 1px solid rgba(46, 196, 182, 0.3); border-left: 4px solid var(--tech-orange); backdrop-filter: blur(10px); box-shadow: 0 0 15px rgba(255, 159, 28, 0.1); color: var(--text-main); }
+      .kid-card h2 { color: var(--tech-yellow); font-family: 'Orbitron'; border-bottom: 1px solid rgba(255, 191, 0, 0.2); padding-bottom: 10px; }
+      .activity-item { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); }
+      .activity-info a { color: var(--tech-orange); font-family: 'Orbitron'; text-transform: uppercase; font-weight: bold; }
+      .event-date { color: var(--tech-green); font-family: 'Orbitron'; font-weight: bold; }
+      .ninja-month-img { border: 2px solid var(--tech-yellow); clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); }
+      .vote-btn { border: 2px solid var(--tech-orange); color: var(--tech-orange); font-family: 'Orbitron'; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%); transition: all 0.2s; background: transparent; }
+      .vote-btn:hover { background: var(--tech-orange); color: var(--tech-bg); }
+      #clock { font-family: 'Orbitron'; color: var(--tech-yellow); text-shadow: 0 0 10px rgba(255, 191, 0, 0.3); }
+      @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.02); opacity: 1; } }
+      .animated { animation: pulse 4s ease-in-out infinite; }
+      .text-muted-theme { color: var(--text-muted); }
+      .activity-info h3 { color: var(--text-main); }
+    </style>
+  <% } else { %>
+    <!-- Classic Dojo Theme -->
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --dojo-red: #E63946;
+        --dojo-black: #1a1a1a;
+        --dojo-white: #ffffff;
+        --text-muted: #666;
+      }
+      body {
+        background-color: #f0f0f0;
+        background-image: url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
+        color: var(--dojo-black);
+        font-family: 'Open Sans', sans-serif;
+      }
+      .header { background: var(--dojo-black); color: white; border-bottom: 5px solid var(--dojo-red); }
+      .kid-card { background: white; border: 4px solid var(--dojo-black); border-radius: 0; box-shadow: 10px 10px 0px var(--dojo-red); color: var(--dojo-black); }
+      .kid-card h2 { color: var(--dojo-red); font-family: 'Bangers'; font-size: 2.2rem; }
+      .activity-item { border-left: 5px solid var(--dojo-red); background: #fafafa; }
+      .activity-info a { background: var(--dojo-black); color: white; padding: 5px 15px; font-family: 'Bangers'; }
+      .event-date { background: var(--dojo-red); color: white; font-weight: bold; padding: 2px 10px; }
+      .ninja-month-img { border: 4px solid var(--dojo-black); border-radius: 0; transform: rotate(-2deg); }
+      .vote-btn { background: var(--dojo-red); color: white; font-family: 'Bangers'; font-size: 1.5rem; border-radius: 0; }
+      #clock { font-family: 'Bangers'; color: var(--dojo-red); font-size: 2.5rem; }
+      .animated { transition: transform 0.3s; }
+      .kid-card:hover { transform: scale(1.02); }
+      .text-muted-theme { color: var(--text-muted); }
+    </style>
+  <% } %>
+
+  <style>
+    body { min-height: 100vh; margin: 0; padding: 20px; overflow-x: hidden; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding: 15px 30px; }
+    .logo { height: 50px; }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; }
+    .kid-card { padding: 25px; position: relative; }
+    
+    .activities-container {
+      display: grid;
+      gap: 15px;
+      height: calc(100% - 60px); /* Adjust based on H2 height */
+    }
+    .activities-grid-1 { grid-template-columns: 1fr; }
+    .activities-grid-2 { grid-template-columns: 1fr 1fr; }
+    .activities-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .activities-grid-4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+    
+    .activity-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border-radius: 20px;
+      text-align: center;
+      cursor: pointer;
+    }
+    .activity-item:hover {
+      transform: scale(1.05);
+      background: rgba(255,255,255,0.1);
+    }
+    .activity-img {
+      width: 100%;
+      height: 120px;
+      object-fit: contain;
+      margin-bottom: 10px;
+    }
+    .activity-info h3 {
+      font-size: 1.1rem;
+      margin: 0;
+      font-weight: 700;
+    }
+
+    .event-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .ninja-month-container { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
+    .ninja-month-img { width: 100px; height: 100px; object-fit: cover; }
+    .fun-fact-text { font-size: 1.1rem; text-align: center; padding: 15px; font-style: italic; }
+    .sensei-box { text-align: center; }
+    .vote-btn { text-decoration: none; display: inline-block; padding: 10px 25px; margin-top: 15px; }
+    @media (max-width: 1200px) { .dashboard-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="d-flex align-items-center gap-4">
+      <div class="logo-container" style="background: white; padding: 10px 20px; border-radius: 15px; display: flex; align-items: center;">
+        <img src="/img/cn_logo.png" alt="Code Ninjas" class="logo">
+      </div>
+      <a href="/ninjabucks" class="vote-btn" style="margin-top: 0; background: #FFD93D; color: #000; box-shadow: 0 4px 0px #c9a500; font-size: 1rem; padding: 8px 20px;">
+        <i class="bi bi-coin me-2"></i> NINJA BUCKS
+      </a>
+    </div>
+    <div id="clock"></div>
+  </div>
+
+  <div class="dashboard-grid">
+    <div class="kid-card animated">
+      <h2>This Week's Activities</h2>
+      <div class="activities-container activities-grid-<%= Math.min(activitiesThisWeek.length, 4) %>">
+        <% activitiesThisWeek.forEach(act => { %>
+          <a href="<%= act.link || '#' %>" target="_blank" class="activity-item">
+            <img src="<%= act.image %>" class="activity-img">
+            <div class="activity-info">
+              <h3><%= act.description %></h3>
+            </div>
+          </a>
+        <% }) %>
+      </div>
+    </div>
+
+    <div class="kid-card animated" style="animation-delay: -1s;">
+      <h2>Next Week's Activities</h2>
+      <div class="activities-container activities-grid-<%= Math.min(activitiesNextWeek.length, 4) %>">
+        <% activitiesNextWeek.forEach(act => { %>
+          <a href="<%= act.link || '#' %>" target="_blank" class="activity-item">
+            <img src="<%= act.image %>" class="activity-img">
+            <div class="activity-info">
+              <h3><%= act.description %></h3>
+            </div>
+          </a>
+        <% }) %>
+      </div>
+    </div>
+
+    <div class="kid-card animated" style="animation-delay: -2s;">
+      <h2>Dojo Events</h2>
+      <% specialEvents.forEach(event => { %>
+        <div class="event-row">
+          <span class="event-date"><%= event.date %></span>
+          <span class="event-text"><%= event.text %></span>
+        </div>
+      <% }) %>
+    </div>
+
+    <!-- Ninjas of the Month Section -->
+    <div class="kid-card animated" style="animation-delay: -3s; grid-column: span 2; border-color: <%= notmColor %>; box-shadow: 0 10px 0px <%= notmColor %>;">
+      <h2 style="color: <%= notmColor %>;">Ninjas of the Month - <%= notmMonth %></h2>
+      <div class="ninja-month-container" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+        <% ninjasOfTheMonth.forEach(ninja => { %>
+          <div class="text-center">
+            <img src="<%= ninja.image %>" class="ninja-month-img" style="width: 80px; height: 80px; margin-bottom: 5px;">
+            <div style="font-weight: bold; font-size: 0.9rem;"><%= ninja.name %></div>
+            <div class="text-muted-theme" style="font-size: 0.7rem; text-transform: uppercase;"><%= ninja.type.replace('_', ' ') %></div>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+
+    <div class="kid-card animated" style="animation-delay: -4s;">
+      <h2>Fun Fact</h2>
+      <div class="fun-fact-text">
+        "<%= funFact %>"
+      </div>
+    </div>
+
+    <div class="kid-card animated" style="animation-delay: -5s; grid-column: span 3;">
+      <h2>Sensei of the Month</h2>
+      <div class="sensei-box">
+        <div class="sensei-name" style="font-size: 1.8rem; font-weight: bold; margin-bottom: 10px;"><%= senseiOfMonth %></div>
+        <a href="<%= senseiVotingLink %>" class="vote-btn" target="_blank" style="padding: 12px 40px; font-size: 1.2rem;">VOTE FOR SENSEI!</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+  </script>
+</body>
+</html>

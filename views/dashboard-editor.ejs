@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Editor - Admin</title>
+  <link rel="stylesheet" href="/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/icons/bootstrap-icons.css">
+  <style>
+    :root {
+      --cn-blue: #358ebc;
+      --cn-dark: #231f20;
+    }
+    body { background-color: #f5f6f8; font-family: 'Segoe UI', sans-serif; }
+    .sidebar {
+      width: 240px; background: var(--cn-dark); min-height: 100vh; color: white; position: fixed;
+    }
+    .main { margin-left: 240px; padding: 40px; }
+    .nav-link { color: #99aabb; padding: 12px 20px; border-radius: 8px; margin: 4px 10px; }
+    .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.1); color: white; }
+    .nav-link.active { background: var(--cn-blue); }
+    .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .section-title { font-weight: 700; margin-bottom: 20px; color: var(--cn-dark); display: flex; align-items: center; gap: 10px; }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="p-4 text-center">
+      <img src="/img/cn_logo.png" height="30" alt="Code Ninjas">
+    </div>
+    <div class="mt-4">
+      <a href="/admin" class="nav-link d-block"><i class="bi bi-speedometer2 me-2"></i> Dashboard Home</a>
+      <a href="/admin/dashboard-editor" class="nav-link d-block active"><i class="bi bi-pencil-square me-2"></i> Edit Ninja Dashboard</a>
+      <a href="/admin/ninjabucks-editor" class="nav-link d-block"><i class="bi bi-currency-dollar me-2"></i> Edit Ninja Bucks</a>
+      <a href="/ninjabucks" class="nav-link d-block"><i class="bi bi-coin me-2"></i> Ninja Bucks</a>
+      <a href="/" target="_blank" class="nav-link d-block"><i class="bi bi-eye-fill me-2"></i> View Ninja Dashboard</a>
+      <a href="/logout" class="nav-link d-block mt-4 text-danger"><i class="bi bi-box-arrow-right me-2"></i> Logout</a>
+    </div>
+  </div>
+
+  <main class="main">
+    <h2 class="mb-4">Ninja Dashboard Editor</h2>
+    <p class="text-muted">Update the content shown on the kid-friendly dashboard.</p>
+
+    <form action="/admin/update-dashboard" method="POST" enctype="multipart/form-data">
+      
+      <!-- Theme Selection -->
+      <div class="card p-4">
+        <h5 class="section-title"><i class="bi bi-palette"></i> Select Ninja Dashboard Theme</h5>
+        <div class="row">
+          <div class="col-md-4">
+            <div class="form-check card p-3 h-100 <%= data.theme === 'space' ? 'border-primary' : '' %>">
+              <input class="form-check-input" type="radio" name="theme" id="themeSpace" value="space" <%= data.theme === 'space' ? 'checked' : '' %>>
+              <label class="form-check-label w-100" for="themeSpace">
+                <strong>Space Adventure</strong>
+                <p class="small text-muted mb-0">Floating planets, stars, and cosmic purple colors.</p>
+              </label>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-check card p-3 h-100 <%= data.theme === 'cyber' ? 'border-primary' : '' %>">
+              <input class="form-check-input" type="radio" name="theme" id="themeCyber" value="cyber" <%= data.theme === 'cyber' ? 'checked' : '' %>>
+              <label class="form-check-label w-100" for="themeCyber">
+                <strong>Cyber Tech</strong>
+                <p class="small text-muted mb-0">High-tech grid, neon greens and oranges, coding vibe.</p>
+              </label>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-check card p-3 h-100 <%= data.theme === 'classic' ? 'border-primary' : '' %>">
+              <input class="form-check-input" type="radio" name="theme" id="themeClassic" value="classic" <%= data.theme === 'classic' ? 'checked' : '' %>>
+              <label class="form-check-label w-100" for="themeClassic">
+                <strong>Classic Dojo</strong>
+                <p class="small text-muted mb-0">Traditional Code Ninjas red and black dōjō style.</p>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activities This Week -->
+      <div class="card p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="section-title mb-0"><i class="bi bi-calendar-week"></i> Activities This Week</h5>
+          <button type="button" class="btn btn-sm btn-outline-primary" onclick="addActivity('this')"><i class="bi bi-plus-lg"></i> Add Activity</button>
+        </div>
+        <div id="activities-this-container">
+          <% data.activitiesThisWeek.forEach((act, index) => { %>
+            <div class="activity-row row mb-3 pb-3 border-bottom" data-index="<%= index %>">
+              <div class="col-md-2 text-center">
+                <img src="<%= act.image %>" class="img-fluid rounded border mb-2" style="max-height: 80px; object-fit: contain;" id="preview_this_<%= index %>">
+                <input type="file" name="activitiesThisWeek_image_<%= index %>" class="form-control form-control-sm mb-2">
+                <button type="button" class="btn btn-sm btn-outline-danger w-100" onclick="removeActivity(this)"><i class="bi bi-trash"></i> Remove</button>
+              </div>
+              <div class="col-md-10">
+                <div class="row">
+                  <div class="col-md-12 mb-2">
+                    <label class="form-label small mb-1">Image URL (Optional - overrides file upload)</label>
+                    <input type="text" name="activitiesThisWeek_url_<%= index %>" value="<%= act.image.startsWith('http') ? act.image : '' %>" class="form-control form-control-sm" placeholder="https://example.com/image.png" onchange="updatePreview(this, 'preview_this_<%= index %>')">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small mb-1">Description</label>
+                    <input type="text" name="activitiesThisWeek_desc_<%= index %>" value="<%= act.description %>" class="form-control">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small mb-1">Game Link</label>
+                    <input type="text" name="activitiesThisWeek_link_<%= index %>" value="<%= act.link %>" class="form-control">
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <!-- Activities Next Week -->
+      <div class="card p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="section-title mb-0"><i class="bi bi-calendar-plus"></i> Activities Next Week</h5>
+          <button type="button" class="btn btn-sm btn-outline-primary" onclick="addActivity('next')"><i class="bi bi-plus-lg"></i> Add Activity</button>
+        </div>
+        <div id="activities-next-container">
+          <% data.activitiesNextWeek.forEach((act, index) => { %>
+            <div class="activity-row row mb-3 pb-3 border-bottom" data-index="<%= index %>">
+              <div class="col-md-2 text-center">
+                <img src="<%= act.image %>" class="img-fluid rounded border mb-2" style="max-height: 80px; object-fit: contain;" id="preview_next_<%= index %>">
+                <input type="file" name="activitiesNextWeek_image_<%= index %>" class="form-control form-control-sm mb-2">
+                <button type="button" class="btn btn-sm btn-outline-danger w-100" onclick="removeActivity(this)"><i class="bi bi-trash"></i> Remove</button>
+              </div>
+              <div class="col-md-10">
+                <div class="row">
+                  <div class="col-md-12 mb-2">
+                    <label class="form-label small mb-1">Image URL (Optional - overrides file upload)</label>
+                    <input type="text" name="activitiesNextWeek_url_<%= index %>" value="<%= act.image.startsWith('http') ? act.image : '' %>" class="form-control form-control-sm" placeholder="https://example.com/image.png" onchange="updatePreview(this, 'preview_next_<%= index %>')">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small mb-1">Description</label>
+                    <input type="text" name="activitiesNextWeek_desc_<%= index %>" value="<%= act.description %>" class="form-control">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small mb-1">Preview Link</label>
+                    <input type="text" name="activitiesNextWeek_link_<%= index %>" value="<%= act.link %>" class="form-control">
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <!-- Special Events -->
+      <div class="card p-4">
+        <h5 class="section-title"><i class="bi bi-star"></i> Special Events</h5>
+        <% data.specialEvents.forEach((event, index) => { %>
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <input type="text" name="specialEvents_date_<%= index %>" value="<%= event.date %>" class="form-control" placeholder="Date (e.g. April 15)">
+            </div>
+            <div class="col-md-8">
+              <input type="text" name="specialEvents_text_<%= index %>" value="<%= event.text %>" class="form-control" placeholder="Event Description">
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <!-- Fun Fact & Sensei info -->
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card p-4">
+            <h5 class="section-title"><i class="bi bi-lightbulb"></i> Fun Fact</h5>
+            <textarea name="funFact" class="form-control" rows="3"><%= data.funFact %></textarea>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card p-4">
+            <h5 class="section-title"><i class="bi bi-person-badge"></i> Sensei of the Month</h5>
+            <div class="mb-3">
+              <label class="form-label">Current Sensei</label>
+              <input type="text" name="senseiOfMonth" value="<%= data.senseiOfMonth %>" class="form-control">
+            </div>
+            <div>
+              <label class="form-label">Voting Link (Google Form, etc.)</label>
+              <input type="text" name="senseiVotingLink" value="<%= data.senseiVotingLink %>" class="form-control">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ninjas of the Month -->
+      <div class="card p-4">
+        <h5 class="section-title"><i class="bi bi-trophy"></i> Ninjas of the Month</h5>
+        
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <label class="form-label font-weight-bold">Display Month</label>
+            <input type="text" name="notmMonth" value="<%= data.notmMonth %>" class="form-control" placeholder="e.g. April 2026">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label font-weight-bold">Section Theme Color</label>
+            <input type="color" name="notmColor" value="<%= data.notmColor %>" class="form-control form-control-color w-100" style="height: 38px;">
+          </div>
+        </div>
+
+        <div class="row">
+          <% 
+            const types = [
+              { id: 'challenge', label: 'Challenge' },
+              { id: 'collector', label: 'Collector' },
+              { id: 'creative', label: 'Creative' },
+              { id: 'focused', label: 'Focused' },
+              { id: 'friendly', label: 'Friendly' },
+              { id: 'helpful', label: 'Helpful' },
+              { id: 'scholar', label: 'Scholar' },
+              { id: 'skillful', label: 'Skillful' },
+              { id: 'surprise_ninja', label: 'Surprise Ninja' }
+            ];
+          %>
+          <% data.ninjasOfTheMonth.forEach((ninja, index) => { %>
+            <div class="col-md-4 mb-4">
+              <div class="border rounded p-3 bg-light">
+                <div class="text-center mb-2">
+                  <img src="/img/notm/<%= ninja.type %>.png" class="img-fluid rounded" style="height: 60px;" id="notm_img_<%= index %>">
+                </div>
+                <div class="mb-2">
+                  <label class="small text-muted">Ninja Name</label>
+                  <input type="text" name="notm_name_<%= index %>" value="<%= ninja.name %>" class="form-control form-control-sm">
+                </div>
+                <div>
+                  <label class="small text-muted">Award Type</label>
+                  <select name="notm_type_<%= index %>" class="form-select form-select-sm" onchange="document.getElementById('notm_img_<%= index %>').src='/img/notm/'+this.value+'.png'">
+                    <% types.forEach(t => { %>
+                      <option value="<%= t.id %>" <%= ninja.type === t.id ? 'selected' : '' %>><%= t.label %></option>
+                    <% }) %>
+                  </select>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <div class="text-end mt-4">
+        <button type="submit" class="btn btn-primary btn-lg px-5">Save Changes</button>
+      </div>
+    </form>
+  </main>
+
+  <script>
+    function syncLeaderboard() {
+      const btn = event.currentTarget;
+      const originalHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Syncing...';
+
+      fetch('/admin/sync-leaderboard', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            alert('Leaderboard synced successfully! Found ' + data.count + ' ninjas.');
+            window.location.reload();
+          } else {
+            alert('Sync Error: ' + (data.error || 'Unknown error'));
+          }
+        })
+        .catch(err => alert('Network Error: ' + err.message))
+        .finally(() => {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        });
+    }
+
+    function updatePreview(input, imgId) {
+      if (input.value) {
+        document.getElementById(imgId).src = input.value;
+      }
+    }
+
+    function removeActivity(btn) {
+      const row = btn.closest('.activity-row');
+      const container = row.parentElement;
+      row.remove();
+      reindexRows(container);
+    }
+
+    function reindexRows(container) {
+      const prefix = container.id === 'activities-this-container' ? 'activitiesThisWeek' : 'activitiesNextWeek';
+      const previewPrefix = container.id === 'activities-this-container' ? 'preview_this' : 'preview_next';
+      
+      const rows = container.querySelectorAll('.activity-row');
+      rows.forEach((row, i) => {
+        row.setAttribute('data-index', i);
+        row.querySelector('img').id = `${previewPrefix}_${i}`;
+        row.querySelector('input[type="file"]').setAttribute('name', `${prefix}_image_${i}`);
+        
+        const inputs = row.querySelectorAll('input[type="text"]');
+        inputs[0].setAttribute('name', `${prefix}_url_${i}`);
+        inputs[0].setAttribute('onchange', `updatePreview(this, '${previewPrefix}_${i}')`);
+        inputs[1].setAttribute('name', `${prefix}_desc_${i}`);
+        inputs[2].setAttribute('name', `${prefix}_link_${i}`);
+      });
+    }
+
+    function addActivity(type) {
+      const containerId = type === 'this' ? 'activities-this-container' : 'activities-next-container';
+      const container = document.getElementById(containerId);
+      const index = container.querySelectorAll('.activity-row').length;
+      const prefix = type === 'this' ? 'activitiesThisWeek' : 'activitiesNextWeek';
+      const previewPrefix = type === 'this' ? 'preview_this' : 'preview_next';
+
+      const html = `
+        <div class="activity-row row mb-3 pb-3 border-bottom" data-index="${index}">
+          <div class="col-md-2 text-center">
+            <img src="/img/cn_logo.png" class="img-fluid rounded border mb-2" style="max-height: 80px; object-fit: contain;" id="${previewPrefix}_${index}">
+            <input type="file" name="${prefix}_image_${index}" class="form-control form-control-sm mb-2">
+            <button type="button" class="btn btn-sm btn-outline-danger w-100" onclick="removeActivity(this)"><i class="bi bi-trash"></i> Remove</button>
+          </div>
+          <div class="col-md-10">
+            <div class="row">
+              <div class="col-md-12 mb-2">
+                <label class="form-label small mb-1">Image URL (Optional)</label>
+                <input type="text" name="${prefix}_url_${index}" class="form-control form-control-sm" placeholder="https://example.com/image.png" onchange="updatePreview(this, '${previewPrefix}_${index}')">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small mb-1">Description</label>
+                <input type="text" name="${prefix}_desc_${index}" class="form-control">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small mb-1">Link</label>
+                <input type="text" name="${prefix}_link_${index}" class="form-control">
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', html);
+    }
+  </script>
+</body>
+</html>

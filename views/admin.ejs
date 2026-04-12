@@ -30,68 +30,16 @@
     .sidebar {
       width: 240px;
       background: var(--cn-dark);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
+      min-height: 100vh;
       color: white;
+      position: fixed;
+      z-index: 1000;
     }
-    .logo-area {
-      padding: 18px 16px;
-      background: var(--cn-white);
-      border-bottom: 1px solid var(--cn-border);
-      text-align: center;
-    }
-    .logo-area img { 
-      height: 36px; 
-      display: block; 
-      margin: 0 auto;
-    }
+    .main { flex: 1; padding: 24px 28px; margin-left: 240px; overflow-y: auto; }
 
-  .user-pill {
-    margin: 14px 12px;
-    padding: 9px 12px;
-    background: rgba(255,255,255,0.06);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    border: 1px solid rgba(255,255,255,0.08);
-  }
-  .user-avatar {
-    width: 28px; height: 28px;
-    background: var(--cn-blue);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 600; color: white; flex-shrink: 0;
-  }
-  .user-name { color: #f0f0f0; font-size: 12px; font-weight: 500; }
-  .user-role { color: #8899aa; font-size: 10px; }
-
-  .nav-section { padding: 6px 10px; flex: 1; }
-  .nav-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #667788; padding: 10px 8px 6px; }
-  .nav-links { list-style: none; }
-  .nav-links li { margin-bottom: 2px; }
-  .nav-links li a {
-    display: flex; align-items: center;
-    padding: 10px 14px;
-    border-radius: 7px;
-    color: #99aabb;
-    text-decoration: none;
-    font-size: 13.5px;
-    transition: all 0.15s;
-    cursor: pointer;
-  }
-  .nav-links li a:hover { background: rgba(255,255,255,0.07); color: #fff; }
-  .nav-links li a.active { background: var(--cn-blue); color: #fff; font-weight: 500; }
-  .nav-icon { 
-    font-size: 16px; 
-    width: 28px; 
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-  }
-
-  .main { flex: 1; padding: 24px 28px; overflow-y: auto; }
+    .nav-link { color: #99aabb; padding: 12px 20px; border-radius: 8px; margin: 4px 10px; text-decoration: none; display: block; font-size: 14px; transition: all 0.2s; }
+    .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.1); color: white; }
+    .nav-link.active { background: var(--cn-blue); }
 
   .topbar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; }
   .topbar h1 { font-size: 20px; font-weight: 600; color: var(--cn-black); }
@@ -143,12 +91,12 @@
   .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
   .card-icon {
     width: 36px; height: 36px; border-radius: 8px;
-    display: flex; align-items: center; justify-content: center; font-size: 16px;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
   }
-  .icon-blue { background: var(--cn-blue-light); }
-  .icon-dark { background: #f0f0f2; }
-  .icon-teal { background: #e6f6f4; }
-  .icon-amber { background: #fef9e7; }
+  .icon-blue { background: var(--cn-blue-light); color: var(--cn-blue); }
+  .icon-dark { background: #f0f0f2; color: var(--cn-dark); }
+  .icon-teal { background: #e6f6f4; color: #1a7a72; }
+  .icon-amber { background: #fef9e7; color: #9a6e00; }
 
   .card-badge {
     font-size: 10px; font-weight: 600;
@@ -156,7 +104,7 @@
     text-transform: uppercase; letter-spacing: 0.4px;
   }
   .badge-action { background: #e8f4fb; color: var(--cn-blue-dark); }
-  .badge-data { background: #f0f0f2; color:     #444; }
+  .badge-data { background: #f0f0f2; color: #444; }
   .badge-log { background: #fef9e7; color: #9a6e00; }
   .badge-event { background: #e6f6f4; color: #1a7a72; }
 
@@ -182,28 +130,17 @@
 
 <div class="wrap">
   <aside class="sidebar">
-    <div class="logo-area">
-      <img src="/img/cn_logo.png" style="width: 100%; height: auto;">
+    <div class="p-4 text-center border-bottom border-secondary border-opacity-25 bg-white">
+      <img src="/img/cn_logo.png" height="30" alt="Code Ninjas">
     </div>
 
-    <div class="user-pill">
-      <div class="user-avatar">S</div>
-      <div>
-        <div class="user-name">Sensei</div>
-        <div class="user-role">Staff · Active</div>
-      </div>
-    </div>
-
-    <div class="nav-section">
-      <div class="nav-label">Navigation</div>
-      <ul class="nav-links">
-        <li><a href="#" class="active"><span class="nav-icon"><i class="bi bi-speedometer2"></i></span> Dashboard</a></li>
-        <li><a href="#"><span class="nav-icon"><i class="bi bi-people"></i></span> Active Members</a></li>
-        <li><a href="#"><span class="nav-icon"><i class="bi bi-coin"></i></span> NinjaBucks</a></li>
-        <li><a href="#"><span class="nav-icon"><i class="bi bi-sword"></i></span> Boss Battle</a></li>
-        <li><a href="#"><span class="nav-icon"><i class="bi bi-archive"></i></span> Archives</a></li>
-        <li><a href="#"><span class="nav-icon"><i class="bi bi-gear"></i></span> Settings</a></li>
-      </ul>
+    <div class="mt-4">
+      <a href="/admin" class="nav-link active"><i class="bi bi-speedometer2 me-2"></i> Dashboard Home</a>
+      <a href="/admin/dashboard-editor" class="nav-link"><i class="bi bi-pencil-square me-2"></i> Edit Ninja Dashboard</a>
+      <a href="/admin/ninjabucks-editor" class="nav-link"><i class="bi bi-currency-dollar me-2"></i> Edit Ninja Bucks</a>
+      <a href="/ninjabucks" class="nav-link"><i class="bi bi-coin me-2"></i> Ninja Bucks</a>
+      <a href="/" target="_blank" class="nav-link"><i class="bi bi-eye-fill me-2"></i> View Ninja Dashboard</a>
+      <a href="/logout" class="nav-link mt-4 text-danger"><i class="bi bi-box-arrow-right me-2"></i> Logout</a>
     </div>
   </aside>
 
@@ -216,7 +153,8 @@
       <div class="date-badge" id="date-badge">Loading...</div>
     </div>
 
-    <div class="stat-row">
+    <!-- Stats Hidden for now -->
+    <div class="stat-row" style="display: none;">
       <div class="stat-card">
         <div class="stat-label">Active Ninjas</div>
         <div class="stat-value">48</div>
@@ -239,30 +177,67 @@
       </div>
     </div>
 
+    <div class="section-header"><div class="section-title">Ninja Dashboard</div><div class="section-line"></div></div>
+    <div class="grid">
+      <a href="/admin/dashboard-editor" style="text-decoration: none; color: inherit;">
+        <div class="card">
+          <div class="card-top">
+            <div class="card-icon icon-teal"><i class="bi bi-display"></i></div>
+            <span class="card-badge badge-event">Public</span>
+          </div>
+          <h3>Edit Ninja Dashboard</h3>
+          <p>Update activities, events, and Ninja of the Month for the lobby display.</p>
+          <div class="card-arrow">→</div>
+        </div>
+      </a>
+      <a href="/admin/ninjabucks-editor" style="text-decoration: none; color: inherit;">
+        <div class="card">
+          <div class="card-top">
+            <div class="card-icon icon-blue"><i class="bi bi-currency-dollar"></i></div>
+            <span class="card-badge badge-action">Config</span>
+          </div>
+          <h3>Edit Ninja Bucks</h3>
+          <p>Configure Google Spreadsheet integration and sync ninja leaderboard data.</p>
+          <div class="card-arrow">→</div>
+        </div>
+      </a>
+      <a href="/" target="_blank" style="text-decoration: none; color: inherit;">
+        <div class="card">
+          <div class="card-top">
+            <div class="card-icon icon-amber"><i class="bi bi-eye-fill"></i></div>
+            <span class="card-badge badge-log">View</span>
+          </div>
+          <h3>View Ninja Dashboard</h3>
+          <p>Open the kid-friendly dashboard in a new tab to see current changes.</p>
+          <div class="card-arrow">→</div>
+        </div>
+      </a>
+    </div>
+
     <div class="section-header"><div class="section-title">Actions</div><div class="section-line"></div></div>
     <div class="grid">
-      <div class="card">
+      <div class="card opacity-75">
         <div class="card-top">
-          <div class="card-icon icon-blue">➕</div>
-          <span class="card-badge badge-action">Action</span>
+          <div class="card-icon icon-blue"><i class="bi bi-person-plus-fill"></i></div>
+          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
         </div>
         <h3>Add Ninja</h3>
         <p>Register a new ninja and initialize their starting profile.</p>
         <div class="card-arrow">→</div>
       </div>
-      <div class="card">
+      <div class="card opacity-75">
         <div class="card-top">
-          <div class="card-icon icon-blue">⚡</div>
-          <span class="card-badge badge-action">Action</span>
+          <div class="card-icon icon-blue"><i class="bi bi-sliders"></i></div>
+          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
         </div>
         <h3>Buttons / Controls</h3>
         <p>Quick-action macros to award NinjaBucks or trigger events.</p>
         <div class="card-arrow">→</div>
       </div>
-      <div class="card">
+      <div class="card opacity-75">
         <div class="card-top">
-          <div class="card-icon icon-blue">🥋</div>
-          <span class="card-badge badge-action">Action</span>
+          <div class="card-icon icon-blue"><i class="bi bi-graph-up-arrow"></i></div>
+          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
         </div>
         <h3>Update Progress</h3>
         <p>Log belt tests, rank advancements, and curriculum milestones.</p>
@@ -272,68 +247,70 @@
 
     <div class="section-header"><div class="section-title">Database</div><div class="section-line"></div></div>
     <div class="grid">
-      <div class="card">
+      <div class="card opacity-75">
         <div class="card-top">
-          <div class="card-icon icon-dark">◧</div>
-          <span class="card-badge badge-data">Database</span>
+          <div class="card-icon icon-dark"><i class="bi bi-database-fill"></i></div>
+          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
         </div>
         <h3>Master Data</h3>
         <p>All member stats, history, and metadata in one place.</p>
         <div class="card-arrow">→</div>
       </div>
-      <div class="card">
+      <div class="card opacity-75">
         <div class="card-top">
-          <div class="card-icon icon-dark">▦</div>
-          <span class="card-badge badge-data">Database</span>
+          <div class="card-icon icon-dark"><i class="bi bi-grid-3x3-gap-fill"></i></div>
+          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
         </div>
         <h3>Progress Matrix</h3>
         <p>Visual overview of all ninjas' current belt and degree status.</p>
         <div class="card-arrow">→</div>
       </div>
-      <div class="card">
-        <div class="card-top">
-          <div class="card-icon icon-dark">◎</div>
-          <span class="card-badge badge-data">Database</span>
+      <a href="/ninjabucks" style="text-decoration: none; color: inherit;">
+        <div class="card">
+          <div class="card-top">
+            <div class="card-icon icon-dark"><i class="bi bi-journal-text"></i></div>
+            <span class="card-badge badge-data">Public</span>
+          </div>
+          <h3>Ninja Bucks</h3>
+          <p>View the full searchable/sortable Ninja Bucks leaderboard.</p>
+          <div class="card-arrow">→</div>
         </div>
-        <h3>NinjaBucks Ledger</h3>
-        <p>Balances, monthly income, and spending records.</p>
-        <div class="card-arrow">→</div>
-      </div>
+      </a>
     </div>
 
     <div class="section-header"><div class="section-title">Logs & Events</div><div class="section-line"></div></div>
     <div class="grid">
-      <div class="card">
+      <div class="card opacity-75">
         <div class="card-top">
-          <div class="card-icon icon-amber">📋</div>
-          <span class="card-badge badge-log">Log</span>
+          <div class="card-icon icon-amber"><i class="bi bi-clock-history"></i></div>
+          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
         </div>
         <h3>NB Log (Active)</h3>
         <p>Real-time NinjaBucks transactions for today's session.</p>
         <div class="card-arrow">→</div>
       </div>
-      <div class="card">
+      <div class="card opacity-75">
         <div class="card-top">
-          <div class="card-icon icon-amber">📈</div>
-          <span class="card-badge badge-log">Log</span>
+          <div class="card-icon icon-amber"><i class="bi bi-clipboard-pulse"></i></div>
+          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
         </div>
         <h3>Progress Log</h3>
         <p>Timestamped history of all rank advancements and changes.</p>
         <div class="card-arrow">→</div>
       </div>
-      <div class="card">
+      <div class="card opacity-75">
         <div class="card-top">
-          <div class="card-icon icon-amber">🗄</div>
-          <span class="card-badge badge-log">Log</span>
+          <div class="card-icon icon-amber"><i class="bi bi-folder-fill"></i></div>
+          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
         </div>
         <h3>Archive Logs</h3>
         <p>Historical transaction records for auditing past sessions.</p>
         <div class="card-arrow">→</div>
       </div>
-      <div class="card">
+      <div class="card opacity-75">
         <div class="card-top">
-          <div class="card-icon icon-teal">⚔</div>
-          <span class="card-badge badge-event">Event</span>
+          <div class="card-icon icon-teal"><i class="bi bi-trophy-fill"></i></div>
+          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
         </div>
         <h3>Boss Battle</h3>
         <p>Track boss HP, ninja damage dealt, and daily event stats.</p>
@@ -341,9 +318,9 @@
       </div>
     </div>
 
-    <div class="boss-card">
+    <div class="boss-card opacity-50">
       <div class="boss-header">
-        <span class="boss-title">Today's Boss Battle</span>
+        <span class="boss-title">Today's Boss Battle <span class="badge bg-secondary ms-2" style="font-size: 10px;">NON-FUNCTIONAL</span></span>
         <span class="boss-live">● Live</span>
       </div>
       <div class="hp-label">Boss HP — 62% remaining</div>
@@ -356,11 +333,6 @@
 <script>
   const d = new Date();
   document.getElementById('date-badge').textContent = d.toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'});
-  document.querySelectorAll('.nav-links a').forEach(a=>{
-    a.addEventListener('click',function(e){
-      e.preventDefault();
-      document.querySelectorAll('.nav-links a').forEach(x=>x.classList.remove('active'));
-      this.classList.add('active');
-    });
-  });
 </script>
+</body>
+</html>
