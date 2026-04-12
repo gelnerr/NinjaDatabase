@@ -307,10 +307,16 @@ app.post('/admin/update-dashboard', isAuthenticated, upload.any(), async (req, r
   }
   data.activitiesNextWeek = activitiesNextWeek;
 
-  data.specialEvents.forEach((event, idx) => {
-    event.date = body[`specialEvents_date_${idx}`] || event.date;
-    event.text = body[`specialEvents_text_${idx}`] || event.text;
-  });
+  const specialEvents = [];
+  let l = 0;
+  while (body[`specialEvents_date_${l}`] !== undefined) {
+    specialEvents.push({
+      date: body[`specialEvents_date_${l}`],
+      text: body[`specialEvents_text_${l}`]
+    });
+    l++;
+  }
+  data.specialEvents = specialEvents;
 
   data.notmMonth = body.notmMonth || data.notmMonth;
   data.notmColor = body.notmColor || data.notmColor;

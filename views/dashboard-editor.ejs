@@ -164,17 +164,25 @@
 
       <!-- Special Events -->
       <div class="card p-4">
-        <h5 class="section-title"><i class="bi bi-star"></i> Special Events</h5>
-        <% data.specialEvents.forEach((event, index) => { %>
-          <div class="row mb-3">
-            <div class="col-md-4">
-              <input type="text" name="specialEvents_date_<%= index %>" value="<%= event.date %>" class="form-control" placeholder="Date (e.g. April 15)">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="section-title mb-0"><i class="bi bi-star"></i> Special Events</h5>
+          <button type="button" class="btn btn-sm btn-outline-primary" onclick="addEvent()"><i class="bi bi-plus-lg"></i> Add Event</button>
+        </div>
+        <div id="events-container">
+          <% data.specialEvents.forEach((event, index) => { %>
+            <div class="event-row-item row mb-3" data-index="<%= index %>">
+              <div class="col-md-3">
+                <input type="text" name="specialEvents_date_<%= index %>" value="<%= event.date %>" class="form-control" placeholder="Date (e.g. April 15)">
+              </div>
+              <div class="col-md-7">
+                <input type="text" name="specialEvents_text_<%= index %>" value="<%= event.text %>" class="form-control" placeholder="Event Description">
+              </div>
+              <div class="col-md-2">
+                <button type="button" class="btn btn-outline-danger w-100" onclick="removeEvent(this)"><i class="bi bi-trash"></i> Remove</button>
+              </div>
             </div>
-            <div class="col-md-8">
-              <input type="text" name="specialEvents_text_<%= index %>" value="<%= event.text %>" class="form-control" placeholder="Event Description">
-            </div>
-          </div>
-        <% }) %>
+          <% }) %>
+        </div>
       </div>
 
       <!-- Fun Fact & Sensei info -->
@@ -338,6 +346,41 @@
                 <input type="text" name="${prefix}_link_${index}" class="form-control">
               </div>
             </div>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', html);
+    }
+
+    function removeEvent(btn) {
+      const row = btn.closest('.event-row-item');
+      const container = row.parentElement;
+      row.remove();
+      reindexEvents(container);
+    }
+
+    function reindexEvents(container) {
+      const rows = container.querySelectorAll('.event-row-item');
+      rows.forEach((row, i) => {
+        row.setAttribute('data-index', i);
+        row.querySelector('input[name^="specialEvents_date"]').setAttribute('name', `specialEvents_date_${i}`);
+        row.querySelector('input[name^="specialEvents_text"]').setAttribute('name', `specialEvents_text_${i}`);
+      });
+    }
+
+    function addEvent() {
+      const container = document.getElementById('events-container');
+      const index = container.querySelectorAll('.event-row-item').length;
+      const html = `
+        <div class="event-row-item row mb-3" data-index="${index}">
+          <div class="col-md-3">
+            <input type="text" name="specialEvents_date_${index}" class="form-control" placeholder="Date (e.g. April 15)">
+          </div>
+          <div class="col-md-7">
+            <input type="text" name="specialEvents_text_${index}" class="form-control" placeholder="Event Description">
+          </div>
+          <div class="col-md-2">
+            <button type="button" class="btn btn-outline-danger w-100" onclick="removeEvent(this)"><i class="bi bi-trash"></i> Remove</button>
           </div>
         </div>
       `;
