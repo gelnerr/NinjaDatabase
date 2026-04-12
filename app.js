@@ -206,6 +206,50 @@ const syncGoogleSheets = async (data) => {
       console.error('Monthly Sync Error:', monthlyErr.message);
     }
 
+    // --- Sync Belts Totem ---
+    try {
+      const beltsResponse = await sheets.spreadsheets.values.get({
+        spreadsheetId: data.spreadsheetId,
+        range: data.beltsTotemRange || 'Belts Totem!A1:R100',
+      });
+      const beltsRows = beltsResponse.data.values;
+      if (beltsRows && beltsRows.length >= 2) {
+        const beltNames = beltsRows[0];
+        const degreeNames = beltsRows[1];
+        const ninjaRows = beltsRows.slice(2);
+
+        const totem = [];
+        let currentBelt = null;
+        const maxCols = Math.max(beltNames.length, degreeNames.length);
+
+        for (let col = 0; col < maxCols; col++) {
+          if (beltNames[col] && beltNames[col].trim() !== '') {
+            currentBelt = {
+              name: beltNames[col].trim(),
+              degrees: []
+            };
+            totem.push(currentBelt);
+          }
+
+          if (currentBelt) {
+            const ninjas = [];
+            for (let r = 0; r < ninjaRows.length; r++) {
+              if (ninjaRows[r][col] && ninjaRows[r][col].trim() !== '') {
+                ninjas.push(ninjaRows[r][col].trim());
+              }
+            }
+            currentBelt.degrees.push({
+              name: degreeNames[col] ? degreeNames[col].trim() : '',
+              ninjas: ninjas
+            });
+          }
+        }
+        data.beltsTotemData = totem;
+      }
+    } catch (beltsErr) {
+      console.error('Belts Totem Sync Error:', beltsErr.message);
+    }
+
     data.lastUpdated = new Date();
     await data.save();
     return fullData.length;
@@ -246,6 +290,21 @@ app.get('/shop', async (req, res) => {
     });
   } catch (error) {
     console.error('Shop page error:', error.message);
+    res.status(500).send(`Internal Error: ${error.message}`);
+  }
+});
+
+app.get('/belts', async (req, res) => {
+  try {
+    const data = await getDashboardData();
+    await syncGoogleSheets(data);
+    const updatedData = await getDashboardData();
+    res.render('belts', { 
+      totem: updatedData.beltsTotemData || [],
+      user: req.session.user
+    });
+  } catch (error) {
+    console.error('Belts page error:', error.message);
     res.status(500).send(`Internal Error: ${error.message}`);
   }
 });
@@ -320,11 +379,12 @@ app.get('/admin/ninjabucks-editor', isAuthenticated, async (req, res) => {
 
 app.post('/admin/update-ninjabucks-config', isAuthenticated, async (req, res) => {
   const data = await getDashboardData();
-  const { spreadsheetId, spreadsheetRange, monthlyRange, shopRange } = req.body;
+  const { spreadsheetId, spreadsheetRange, monthlyRange, shopRange, beltsTotemRange } = req.body;
   data.spreadsheetId = spreadsheetId || data.spreadsheetId;
   data.spreadsheetRange = spreadsheetRange || data.spreadsheetRange;
   data.monthlyRange = monthlyRange || data.monthlyRange;
   data.shopRange = shopRange || data.shopRange;
+  data.beltsTotemRange = beltsTotemRange || data.beltsTotemRange;
   await data.save();
   res.redirect('/admin/ninjabucks-editor');
 });

@@ -38,8 +38,10 @@ const dashboardSchema = new mongoose.Schema({
   spreadsheetRange: { type: String, default: 'Ninja Bucks!A2:C150' },
   monthlyRange: { type: String, default: 'Ninja Bucks!E2:F6' },
   shopRange: { type: String, default: 'Shop!A2:C50' },
+  beltsTotemRange: { type: String, default: 'Belts Totem!A1:R100' },
   leaderboard: Array,
   monthlyLeaderboard: Array,
+  beltsTotemData: Array,
   shopItems: [shopItemSchema],
   lastUpdated: { type: Date, default: Date.now }
 });
