@@ -67,11 +67,17 @@ const getDashboardData = async () => {
   let data = await Dashboard.findOne();
   if (!data) {
     // Migrate from JSON if it exists, otherwise create new
-    const jsonPath = path.join(__dirname, 'data/dashboard.json');
-    if (fs.existsSync(jsonPath)) {
+    const dataDir = path.join(__dirname, 'data');
+    const jsonPath = path.join(dataDir, 'dashboard.json');
+    if (fs.existsSync(dataDir) && fs.existsSync(jsonPath)) {
       console.log('Migrating data from dashboard.json to MongoDB...');
-      const jsonData = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-      data = await Dashboard.create(jsonData);
+      try {
+        const jsonData = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+        data = await Dashboard.create(jsonData);
+      } catch (err) {
+        console.error('Migration failed, creating empty dashboard:', err.message);
+        data = await Dashboard.create({});
+      }
     } else {
       data = await Dashboard.create({});
     }
@@ -94,47 +100,61 @@ const syncGoogleSheets = async (data) => {
   } else if (process.env.GOOGLE_CREDENTIALS) {
     // If no file, parse the JSON from environment variable directly
     try {
-      authConfig.credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+      const creds = process.env.GOOGLE_CREDENTIALS.trim();
+      // Simple check to see if it's JSON or a path
+      if (creds.startsWith('{')) {
+        authConfig.credentials = JSON.parse(creds);
+      } else {
+        console.error('GOOGLE_CREDENTIALS env var does not look like JSON');
+        return 0;
+      }
     } catch (e) {
       console.error('Error parsing GOOGLE_CREDENTIALS env var:', e.message);
-      throw new Error('Invalid GOOGLE_CREDENTIALS format');
+      return 0;
     }
   } else {
-    throw new Error('Google Credentials not found (file or env var)');
+    // Silent fail if no credentials found to avoid crashing Vercel
+    console.warn('Google Credentials not found (file or env var). Skipping sync.');
+    return 0;
   }
 
-  const auth = new google.auth.GoogleAuth(authConfig);
-  const sheets = google.sheets({ version: 'v4', auth });
-  
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: data.spreadsheetId,
-    range: data.spreadsheetRange || 'Ninja Bucks!A2:C150',
-  });
+  try {
+    const auth = new google.auth.GoogleAuth(authConfig);
+    const sheets = google.sheets({ version: 'v4', auth });
+    
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: data.spreadsheetId,
+      range: data.spreadsheetRange || 'Ninja Bucks!A2:C150',
+    });
 
-  const rows = response.data.values;
-  if (!rows || rows.length === 0) return 0;
+    const rows = response.data.values;
+    if (!rows || rows.length === 0) return 0;
 
-  const fullData = rows
-    .filter(row => row.length >= 2)
-    .map(row => {
-      let name, total;
-      if (row.length >= 3) { name = row[1]; total = row[2]; }
-      else { name = row[0]; total = row[1]; }
+    const fullData = rows
+      .filter(row => row.length >= 2)
+      .map(row => {
+        let name, total;
+        if (row.length >= 3) { name = row[1]; total = row[2]; }
+        else { name = row[0]; total = row[1]; }
 
-      if (!name || name.toLowerCase().trim() === 'ninja name') return null;
+        if (!name || name.toLowerCase().trim() === 'ninja name') return null;
 
-      return {
-        name: name.trim(),
-        total: parseInt(total ? total.toString().replace(/,/g, '') : '0') || 0,
-        monthly: 0
-      };
-    })
-    .filter(n => n !== null);
+        return {
+          name: name.trim(),
+          total: parseInt(total ? total.toString().replace(/,/g, '') : '0') || 0,
+          monthly: 0
+        };
+      })
+      .filter(n => n !== null);
 
-  data.leaderboard = fullData;
-  data.lastUpdated = new Date();
-  await data.save();
-  return fullData.length;
+    data.leaderboard = fullData;
+    data.lastUpdated = new Date();
+    await data.save();
+    return fullData.length;
+  } catch (err) {
+    console.error('Google Sheets Sync Error:', err.message);
+    return 0;
+  }
 };
 
 // --- ROUTES ---
@@ -304,6 +324,10 @@ app.get('/logout', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
