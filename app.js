@@ -27,7 +27,6 @@ const connectDB = async () => {
     console.log('Connected to MongoDB!');
     
     // One-time migration logic
-    const User = require('./models/User');
     const userCount = await User.countDocuments();
     const jsonPath = path.join(__dirname, 'data/users.json');
     if (userCount === 0 && fs.existsSync(jsonPath)) {
@@ -195,18 +194,6 @@ app.get('/ninjabucks', async (req, res) => {
   });
 });
 
-// Sync Leaderboard from Google Sheets (Manual Trigger)
-app.post('/admin/sync-leaderboard', isAuthenticated, async (req, res) => {
-  try {
-    const data = await getDashboardData();
-    const count = await syncGoogleSheets(data);
-    res.json({ success: true, count });
-  } catch (error) {
-    console.error('Manual Spreadsheet Sync Error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // Public Kid Dashboard
 app.get('/', async (req, res) => {
   const data = await getDashboardData();
@@ -218,6 +205,18 @@ const isAuthenticated = (req, res, next) => {
   if (req.session.user) return next();
   res.redirect('/login');
 };
+
+// Sync Leaderboard from Google Sheets (Manual Trigger)
+app.post('/admin/sync-leaderboard', isAuthenticated, async (req, res) => {
+  try {
+    const data = await getDashboardData();
+    const count = await syncGoogleSheets(data);
+    res.json({ success: true, count });
+  } catch (error) {
+    console.error('Manual Spreadsheet Sync Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Admin Panel
 app.get('/admin', isAuthenticated, (req, res) => {
