@@ -78,7 +78,12 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'ninja-secret-key-123',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 1000 * 60 * 60 * 24 } // 24 hours
+  proxy: true,
+  cookie: { 
+    maxAge: 1000 * 60 * 60 * 24,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax'
+  }
 }));
 
 // Set EJS
@@ -290,22 +295,24 @@ app.post('/admin/update-dashboard', isAuthenticated, upload.any(), async (req, r
   res.redirect('/admin/dashboard-editor');
 });
 
-// Emergency Setup Route (Use this if you can't log in or page is empty)
+// Emergency Setup Route (Use this to reset admin or add new senseis)
+// Usage: /admin/setup OR /admin/setup?username=newuser&password=newpassword
 app.get('/admin/setup', async (req, res) => {
   try {
-    const userCount = await User.countDocuments();
-    let message = "";
-    if (userCount === 0) {
-      const hashedPassword = bcrypt.hashSync('password123', 10);
-      await User.create({
-        username: 'sensei',
-        passwordHash: hashedPassword,
-        role: 'admin'
-      });
-      message += "Default user 'sensei' with password 'password123' created. ";
-    } else {
-      message += "Users already exist. ";
-    }
+    const { username, password } = req.query;
+    const targetUser = username || 'sensei';
+    const targetPass = password || 'password123';
+    
+    const hashedPassword = bcrypt.hashSync(targetPass, 10);
+    
+    // Upsert user (Update if exists, Create if not)
+    await User.findOneAndUpdate(
+      { username: targetUser },
+      { passwordHash: hashedPassword, role: 'admin' },
+      { upsert: true, new: true }
+    );
+
+    let message = `User '${targetUser}' is ready with password '${targetPass}'. `;
 
     const dashboardCount = await Dashboard.countDocuments();
     if (dashboardCount === 0) {
@@ -317,10 +324,9 @@ app.get('/admin/setup', async (req, res) => {
         ninjasOfTheMonth: []
       });
       message += "Default dashboard initialized. ";
-    } else {
-      message += "Dashboard already exists. ";
     }
-    res.send(`${message} <br><br> <a href='/login'>Go to Login</a>`);
+    
+    res.send(`<h3>Setup Successful</h3><p>${message}</p><a href='/login'>Go to Login</a>`);
   } catch (error) {
     res.status(500).send("Setup failed: " + error.message);
   }
