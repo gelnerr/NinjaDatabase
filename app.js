@@ -474,7 +474,9 @@ app.post('/admin/update-shop', isAuthenticated, async (req, res) => {
     shopItems.push({
       name: body[`shop_name_${k}`],
       price: parseInt(body[`shop_price_${k}`]) || 0,
-      category: body[`shop_category_${k}`] || 'General'
+      category: body[`shop_category_${k}`] || 'General',
+      outOfStock: body[`shop_outOfStock_${k}`] === 'on',
+      image: body[`shop_image_${k}`] || 'bi-box-seam'
     });
     k++;
   }

@@ -59,9 +59,11 @@
           <table class="table table-hover align-middle">
             <thead class="table-light">
               <tr>
-                <th style="width: 40%;">Item Name</th>
-                <th style="width: 20%;">Price (NB)</th>
-                <th style="width: 30%;">Category</th>
+                <th style="width: 25%;">Item Name</th>
+                <th style="width: 15%;">Price (NB)</th>
+                <th style="width: 20%;">Category</th>
+                <th style="width: 20%;">Icon (Bootstrap Icon)</th>
+                <th style="width: 10%;" class="text-center">Stock</th>
                 <th style="width: 10%;" class="text-end">Action</th>
               </tr>
             </thead>
@@ -79,6 +81,17 @@
                   </td>
                   <td>
                     <input type="text" name="shop_category_<%= index %>" value="<%= item.category %>" class="form-control" placeholder="e.g. Toys, Candy, Gear">
+                  </td>
+                  <td>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="bi <%= item.image || 'bi-box-seam' %>"></i></span>
+                      <input type="text" name="shop_image_<%= index %>" value="<%= item.image || 'bi-box-seam' %>" class="form-control icon-input" placeholder="bi-star" oninput="updateIconPreview(this)">
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <div class="form-check form-switch d-inline-block">
+                      <input class="form-check-input" type="checkbox" name="shop_outOfStock_<%= index %>" <%= item.outOfStock ? 'checked' : '' %>>
+                    </div>
                   </td>
                   <td class="text-end">
                     <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeItem(this)">
@@ -106,6 +119,11 @@
   </main>
 
   <script>
+    function updateIconPreview(input) {
+      const icon = input.previousElementSibling.querySelector('i');
+      icon.className = 'bi ' + (input.value || 'bi-box-seam');
+    }
+
     function addItem() {
       const container = document.getElementById('shop-container');
       const noItemsMsg = document.getElementById('no-items-msg');
@@ -125,6 +143,17 @@
           </td>
           <td>
             <input type="text" name="shop_category_${index}" class="form-control" placeholder="Category">
+          </td>
+          <td>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-box-seam"></i></span>
+              <input type="text" name="shop_image_${index}" value="bi-box-seam" class="form-control icon-input" placeholder="bi-star" oninput="updateIconPreview(this)">
+            </div>
+          </td>
+          <td class="text-center">
+            <div class="form-check form-switch d-inline-block">
+              <input class="form-check-input" type="checkbox" name="shop_outOfStock_${index}">
+            </div>
           </td>
           <td class="text-end">
             <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeItem(this)">
@@ -150,6 +179,8 @@
         row.querySelector('input[name^="shop_name"]').setAttribute('name', `shop_name_${i}`);
         row.querySelector('input[name^="shop_price"]').setAttribute('name', `shop_price_${i}`);
         row.querySelector('input[name^="shop_category"]').setAttribute('name', `shop_category_${i}`);
+        row.querySelector('input[name^="shop_image"]').setAttribute('name', `shop_image_${i}`);
+        row.querySelector('input[name^="shop_outOfStock"]').setAttribute('name', `shop_outOfStock_${i}`);
       });
     }
   </script>

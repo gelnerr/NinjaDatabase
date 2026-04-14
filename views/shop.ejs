@@ -24,8 +24,26 @@
     .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.1); color: white; }
     .nav-link.active { background: var(--cn-blue); }
     
-    .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; transition: transform 0.2s; }
+    .card:hover { transform: translateY(-5px); }
+    .out-of-stock { background-color: #fff5f5; border: 1px solid #feb2b2; position: relative; overflow: hidden; }
+    .out-of-stock .card-body-content { filter: grayscale(0.5); opacity: 0.7; }
+    .out-of-stock::before {
+      content: "OUT OF STOCK";
+      position: absolute;
+      top: 15px;
+      right: -30px;
+      background: #f56565;
+      color: white;
+      padding: 5px 40px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      transform: rotate(45deg);
+      z-index: 1;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
     .price-tag { background: #e8f4fb; color: var(--cn-blue); font-weight: 700; border-radius: 6px; padding: 4px 10px; }
+    .out-of-stock .price-tag { background: #fed7d7; color: #c53030; }
     .btn-back { border-radius: 20px; font-weight: 600; padding: 8px 20px; }
     .category-title { font-weight: 700; color: var(--cn-dark); border-bottom: 2px solid var(--cn-blue); display: inline-block; padding-bottom: 5px; margin-bottom: 20px; }
   </style>
@@ -82,13 +100,15 @@
         <div class="row g-4">
           <% items.forEach(item => { %>
             <div class="col-md-4 col-sm-6">
-              <div class="card h-100 p-3 text-center">
-                <div class="mb-3">
-                  <i class="bi bi-box-seam text-primary" style="font-size: 2.5rem;"></i>
-                </div>
-                <h5 class="fw-bold mb-2"><%= item.name %></h5>
-                <div>
-                  <span class="price-tag"><i class="bi bi-coin me-1"></i> <%= item.price %> Bucks</span>
+              <div class="card h-100 p-3 text-center <%= item.outOfStock ? 'out-of-stock' : '' %>">
+                <div class="card-body-content">
+                  <div class="mb-3">
+                    <i class="bi <%= item.image || 'bi-box-seam' %> text-primary" style="font-size: 2.5rem;"></i>
+                  </div>
+                  <h5 class="fw-bold mb-2"><%= item.name %></h5>
+                  <div>
+                    <span class="price-tag"><i class="bi bi-coin me-1"></i> <%= item.price %> Bucks</span>
+                  </div>
                 </div>
               </div>
             </div>
