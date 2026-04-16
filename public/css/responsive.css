@@ -1,0 +1,156 @@
+/* General Mobile Responsiveness */
+
+/* Dashboard Page */
+@media (max-width: 992px) {
+  .header {
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    text-align: center;
+  }
+  .header .d-flex {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  .ninja-month-container {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .kid-card[style*="grid-column: span 2"],
+  .kid-card[style*="grid-column: span 3"] {
+    grid-column: span 1 !important;
+  }
+  .logo-container {
+    margin-bottom: 10px;
+  }
+  .logo {
+    height: 40px !important;
+  }
+}
+
+@media (max-width: 480px) {
+    .header .d-flex {
+        gap: 10px !important;
+    }
+    .vote-btn {
+        padding: 6px 12px !important;
+        font-size: 0.8rem !important;
+    }
+    #clock {
+        font-size: 1.5rem !important;
+    }
+}
+
+/* Sidebar Pages (Ninja Bucks, Shop, Belts, Admin) */
+@media (max-width: 992px) {
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+    position: relative;
+    height: auto;
+  }
+  .sidebar .p-4 {
+    padding: 15px !important;
+  }
+  .sidebar .mt-4 {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 0 !important;
+    padding-bottom: 15px;
+  }
+  .sidebar .nav-link {
+    margin: 5px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  .main, .with-sidebar {
+    margin-left: 0 !important;
+    padding: 20px !important;
+  }
+  .wrap {
+    flex-direction: column;
+  }
+  .topbar {
+    flex-direction: column;
+    gap: 15px;
+  }
+  .stat-row {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .hall-of-fame {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .stat-row {
+    grid-template-columns: 1fr !important;
+  }
+  .hall-of-fame {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .topbar h1 {
+    font-size: 18px;
+  }
+  .search-box-container {
+      width: 100% !important;
+      margin-top: 15px;
+  }
+  .main-header-flex {
+      flex-direction: column;
+      align-items: flex-start !important;
+  }
+  .main-header-flex > div {
+      width: 100%;
+  }
+}
+
+/* Specific Fixes for Ninja Bucks Page */
+@media (max-width: 768px) {
+    main.main > div.d-flex.justify-content-between.align-items-center.mb-4 {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+    main.main > div.d-flex.justify-content-between.align-items-center.mb-4 > div:last-child {
+        width: 100% !important;
+        margin-top: 20px;
+    }
+}
+
+/* Shop Page Grid */
+.shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+@media (max-width: 576px) {
+    .shop-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Belts Totem Page */
+@media (max-width: 992px) {
+    .belts-container {
+        overflow-x: auto;
+    }
+    .totem-grid {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 20px;
+        padding-bottom: 20px;
+    }
+    .belt-column {
+        min-width: 200px;
+    }
+}
