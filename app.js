@@ -123,7 +123,7 @@ const syncGoogleSheets = async (data) => {
   if (!data.spreadsheetId) return 0;
 
   let authConfig = {
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   };
 
   const credPath = path.join(__dirname, 'credentials.json');
@@ -607,6 +607,90 @@ app.post('/login', async (req, res) => {
 app.get('/logout', (req, res) => {
   req.session.destroy();
   res.redirect('/');
+});
+
+app.get('/admin/ninja-bucks-award', isAuthenticated, async (req, res) => {
+  const data = await getDashboardData();
+  res.render('ninja-bucks-award', { leaderboard: data.leaderboard || [] });
+});
+
+app.post('/admin/update-ninja-bucks', isAuthenticated, async (req, res) => {
+  try {
+    const { ninjaName, amount, reason } = req.body;
+    const data = await getDashboardData();
+    
+    if (!data.spreadsheetId) {
+      return res.status(400).json({ success: false, error: 'Spreadsheet ID not configured.' });
+    }
+
+    // 1. Find the ninja in the local leaderboard to get the current total
+    const ninja = data.leaderboard.find(n => n.name === ninjaName);
+    if (!ninja) {
+      return res.status(404).json({ success: false, error: 'Ninja not found in local cache. Try syncing first.' });
+    }
+
+    // 2. Auth with Google
+    let authConfig = {
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    };
+    const credPath = path.join(__dirname, 'credentials.json');
+    if (process.env.GOOGLE_CREDENTIALS) {
+      authConfig.credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS.trim());
+    } else if (fs.existsSync(credPath)) {
+      authConfig.keyFilename = credPath;
+    }
+
+    const auth = new google.auth.GoogleAuth(authConfig);
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    // 3. Get the full spreadsheet data to find the EXACT row
+    const range = data.spreadsheetRange || 'Ninja Bucks!A2:C150';
+    const sheetName = range.split('!')[0];
+    
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: data.spreadsheetId,
+      range: range,
+    });
+
+    const rows = response.data.values;
+    if (!rows) return res.status(500).json({ success: false, error: 'Could not fetch spreadsheet rows.' });
+
+    // Find row index (0-based in the fetched array, but we need to map it back to the sheet)
+    // Ninja Bucks!A2 starts at row 2. So array index 0 = row 2.
+    const startRow = parseInt(range.match(/\d+/)[0]); 
+    let rowIndex = -1;
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i][0] && rows[i][0].trim() === ninjaName) {
+        rowIndex = i + startRow;
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      return res.status(404).json({ success: false, error: 'Ninja name not found in spreadsheet.' });
+    }
+
+    // 4. Calculate new total
+    const newTotal = (parseInt(ninja.total) || 0) + (parseInt(amount) || 0);
+
+    // 5. Update the specific cell (Column B is Total)
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: data.spreadsheetId,
+      range: `${sheetName}!B${rowIndex}`,
+      valueInputOption: 'USER_ENTERED',
+      resource: { values: [[newTotal]] }
+    });
+
+    // 6. Update local cache immediately
+    ninja.total = newTotal;
+    data.markModified('leaderboard');
+    await data.save();
+
+    res.json({ success: true, newTotal });
+  } catch (error) {
+    console.error('Update Ninja Bucks Error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // Final error handler
