@@ -449,12 +449,13 @@ app.get('/admin/ninjabucks-editor', isAuthenticated, async (req, res) => {
 
 app.post('/admin/update-ninjabucks-config', isAuthenticated, async (req, res) => {
   const data = await getDashboardData();
-  const { spreadsheetId, spreadsheetRange, monthlyRange, shopRange, beltsTotemRange } = req.body;
+  const { spreadsheetId, spreadsheetRange, monthlyRange, shopRange, beltsTotemRange, logRange } = req.body;
   data.spreadsheetId = spreadsheetId || data.spreadsheetId;
   data.spreadsheetRange = spreadsheetRange || data.spreadsheetRange;
   data.monthlyRange = monthlyRange || data.monthlyRange;
   data.shopRange = shopRange || data.shopRange;
   data.beltsTotemRange = beltsTotemRange || data.beltsTotemRange;
+  data.logRange = logRange || data.logRange;
   await data.save();
   res.redirect('/admin/ninjabucks-editor');
 });
@@ -681,7 +682,25 @@ app.post('/admin/update-ninja-bucks', isAuthenticated, async (req, res) => {
       resource: { values: [[newTotal]] }
     });
 
-    // 6. Update local cache immediately
+    // 6. Append to Log Sheet
+    const logRange = data.logRange || 'Log!A2:D';
+    const timestamp = new Date().toLocaleString();
+    try {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: data.spreadsheetId,
+        range: logRange,
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+          values: [[timestamp, ninjaName, reason, amount]]
+        }
+      });
+    } catch (logErr) {
+      console.error('Failed to append to log sheet:', logErr.message);
+      // We don't fail the whole request if just logging fails, 
+      // but the total was updated.
+    }
+
+    // 7. Update local cache immediately
     ninja.total = newTotal;
     data.markModified('leaderboard');
     await data.save();

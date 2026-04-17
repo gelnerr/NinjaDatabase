@@ -47,6 +47,7 @@ const dashboardSchema = new mongoose.Schema({
   monthlyRange: { type: String, default: 'Ninja Bucks!E2:F6' },
   shopRange: { type: String, default: 'Shop!A2:C50' },
   beltsTotemRange: { type: String, default: 'Belts Totem!A1:R100' },
+  logRange: { type: String, default: 'Log!A2:D' },
   leaderboard: Array,
   monthlyLeaderboard: Array,
   beltsTotemData: Array,

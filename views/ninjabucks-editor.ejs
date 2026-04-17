@@ -32,6 +32,7 @@
     <div class="mt-4">
       <a href="/admin" class="nav-link d-block"><i class="bi bi-speedometer2 me-2"></i> Dashboard Home</a>
       <a href="/admin/dashboard-editor" class="nav-link d-block"><i class="bi bi-pencil-square me-2"></i> Edit Ninja Dashboard</a>
+      <a href="/admin/ninja-bucks-award" class="nav-link d-block"><i class="bi bi-coin me-2"></i> Award Ninja Bucks</a>
       <a href="/admin/ninjabucks-editor" class="nav-link d-block active"><i class="bi bi-currency-dollar me-2"></i> Edit Ninja Bucks</a>
       <a href="/admin/shop-editor" class="nav-link d-block"><i class="bi bi-cart4 me-2"></i> Edit Ninja Shop</a>
       <a href="/ninjabucks" class="nav-link d-block"><i class="bi bi-coin me-2"></i> Ninja Bucks</a>
@@ -79,6 +80,11 @@
             <label class="form-label font-weight-bold">Belts Totem Sheet Range</label>
             <input type="text" name="beltsTotemRange" value="<%= data.beltsTotemRange %>" class="form-control" placeholder="Belts Totem!A1:R100">
             <div class="small text-muted mt-1">Format: SheetName!Range (Matrix of Belts, Degrees, and Ninjas)</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label font-weight-bold">Log Sheet Range</label>
+            <input type="text" name="logRange" value="<%= data.logRange %>" class="form-control" placeholder="Log!A2:D">
+            <div class="small text-muted mt-1">Sheet name for transaction logs (Date, Name, Reason, Amount)</div>
           </div>
         </div>
         
