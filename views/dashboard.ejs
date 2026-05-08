@@ -112,6 +112,44 @@
       .text-muted-theme {
         color: var(--text-muted);
       }
+
+      .timer-container {
+        height: 40px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        border: 2px solid var(--space-purple);
+        overflow: hidden;
+        position: relative;
+        flex-grow: 1;
+        margin: 0 20px;
+      }
+      .timer-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--space-cyan), var(--space-blue));
+        transition: width 1s linear;
+      }
+      .timer-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-family: 'Luckiest Guy';
+        white-space: nowrap;
+        text-shadow: 2px 2px 0px var(--space-purple);
+        z-index: 2;
+        width: 100%;
+        text-align: center;
+      }
+      .phase-activity .timer-bar {
+        background: var(--space-yellow);
+        animation: pulse-space 1.5s infinite;
+      }
+      @keyframes pulse-space {
+        0% { opacity: 1; }
+        50% { opacity: 0.6; }
+        100% { opacity: 1; }
+      }
     </style>
     <% } else if (theme==='cyber' ) { %>
       <link
@@ -224,6 +262,47 @@
         .activity-info h3 {
           color: var(--text-main);
         }
+
+        .timer-container {
+          height: 35px;
+          background: rgba(0, 0, 0, 0.3);
+          border: 1px solid var(--tech-green);
+          position: relative;
+          flex-grow: 1;
+          margin: 0 20px;
+          clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+          overflow: hidden;
+        }
+        .timer-bar {
+          height: 100%;
+          background: var(--tech-orange);
+          box-shadow: 0 0 15px var(--tech-orange);
+          transition: width 1s linear;
+        }
+        .timer-text {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          color: var(--text-main);
+          font-family: 'Orbitron';
+          font-size: 0.9rem;
+          font-weight: bold;
+          z-index: 2;
+          width: 100%;
+          text-align: center;
+          text-transform: uppercase;
+        }
+        .phase-activity .timer-bar {
+          background: var(--tech-green);
+          box-shadow: 0 0 20px var(--tech-green);
+          animation: pulse-cyber 1s infinite;
+        }
+        @keyframes pulse-cyber {
+          0% { filter: brightness(1); }
+          50% { filter: brightness(1.5); }
+          100% { filter: brightness(1); }
+        }
       </style>
       <% } else { %>
         <!-- Classic Dojo Theme -->
@@ -314,8 +393,45 @@
           .text-muted-theme {
             color: var(--text-muted);
           }
-        </style>
-        <% } %>
+
+          .timer-container {
+            height: 40px;
+            background: white;
+            border: 4px solid var(--dojo-black);
+            position: relative;
+            flex-grow: 1;
+            margin: 0 20px;
+            overflow: hidden;
+          }
+          .timer-bar {
+            height: 100%;
+            background: var(--dojo-red);
+            transition: width 1s linear;
+          }
+          .timer-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: 'Bangers';
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+            -webkit-text-stroke: 0.5px black;
+            z-index: 2;
+            width: 100%;
+            text-align: center;
+          }
+          .phase-activity .timer-bar {
+            background: repeating-linear-gradient(45deg, #E63946, #E63946 10px, #ffffff 10px, #ffffff 20px);
+            animation: pulse-classic 0.5s infinite linear;
+            background-size: 28px 28px;
+          }
+          @keyframes pulse-classic {
+            from { background-position: 0 0; }
+            to { background-position: 28px 0; }
+          }
+        </style>        <% } %>
 
           <style>
             body {
@@ -480,6 +596,10 @@
         <i class="bi bi-archive me-2"></i> NOTM ARCHIVE
       </a>
     </div>
+    <div id="timer-container" class="timer-container d-none d-lg-block">
+      <div id="timer-bar" class="timer-bar" style="width: 0%;"></div>
+      <div id="timer-text" class="timer-text"></div>
+    </div>
     <div id="clock"></div>
   </div>
 
@@ -578,9 +698,41 @@
   </div>
 
   <script>
+    function updateSessionTimer() {
+      const now = new Date();
+      const mins = now.getMinutes();
+      const secs = now.getSeconds();
+      const timerContainer = document.getElementById('timer-container');
+      const timerBar = document.getElementById('timer-bar');
+      const timerText = document.getElementById('timer-text');
+      
+      if (!timerContainer || !timerBar || !timerText) return;
+
+      if (mins < 45) {
+        // Coding phase (0-45 mins)
+        const totalSecsElapsed = (mins * 60) + secs;
+        const totalSecsInPhase = 45 * 60;
+        const percent = (totalSecsElapsed / totalSecsInPhase) * 100;
+        
+        const secsLeft = totalSecsInPhase - totalSecsElapsed;
+        const minsLeft = Math.floor(secsLeft / 60);
+        const displaySecs = (secsLeft % 60).toString().padStart(2, '0');
+        
+        timerBar.style.width = percent + '%';
+        timerText.innerText = `${minsLeft}:${displaySecs} LEFT FOR CODING!`;
+        timerContainer.classList.remove('phase-activity');
+      } else {
+        // Activity phase (45-60 mins)
+        timerBar.style.width = '100%';
+        timerText.innerText = 'TIME FOR DAILY ACTIVITY!';
+        timerContainer.classList.add('phase-activity');
+      }
+    }
+
     function updateClock() {
       const now = new Date();
       document.getElementById('clock').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      updateSessionTimer();
     }
     setInterval(updateClock, 1000);
     updateClock();
