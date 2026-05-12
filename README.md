@@ -21,3 +21,40 @@ Planning to fully migrate everything to the database website now.
 idk what process there would be for adding the discord bot functionality
 
 ALSO, something i wanted to do with the archive was include the sensei of the month as well, so one side of the page contains ninja of the month already which is well and good, a smaller other side of the page should contain the sensei of the month for each month as well, AND an option to archive the sensei of the month on the admin side too, similar to each month's ninja of the month. Have to include year in this too, already includes month. **[IN PROGRESS]**
+
+## UML for better visualization
+```mermaid
+erDiagram
+    NINJA {
+        ObjectId _id
+        String name
+        String currentBelt
+        Number totalNinjaBucks
+        Boolean isActive
+    }
+    
+    NB_LOG {
+        ObjectId _id
+        String ninjaName
+        String buttonAction
+        Number amount
+        Date date
+        Boolean isArchived
+    }
+    
+    HALL_OF_FAME {
+        ObjectId _id
+        String month
+        Number year
+        String ninjaOfTheMonth
+        String senseiOfTheMonth
+    }
+
+    SENSEI {
+        ObjectId _id
+        String name
+        String role
+    }
+
+    NINJA ||--o{ NB_LOG : "generates"
+```
