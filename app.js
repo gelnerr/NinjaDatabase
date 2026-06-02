@@ -809,6 +809,41 @@ app.post('/admin/progress-log/post-discord', isAuthenticated, async (req, res) =
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
+app.post('/admin/test-webhook', isAuthenticated, async (req, res) => {
+  const steps = [];
+  const step = (label, ok, detail) => steps.push({ label, ok, detail: detail || null });
+
+  // 1. Secret configured on Vercel?
+  const secret = process.env.SHEETS_WEBHOOK_SECRET;
+  step('SHEETS_WEBHOOK_SECRET set on Vercel', !!secret,
+    secret ? `Configured (${secret.length} chars) — make sure WEBHOOK_SECRET in Apps Script Script Properties matches exactly`
+           : 'NOT SET — go to Vercel → Settings → Environment Variables and add SHEETS_WEBHOOK_SECRET');
+  if (!secret) return res.json({ steps, success: false });
+
+  // 2. Grab a real ninja to test with
+  const d = await getDashboardData();
+  const testNinja = d.leaderboard?.[0];
+  step('Leaderboard has ninjas to test with', !!testNinja,
+    testNinja ? `Will test with: "${testNinja.name}"` : 'Leaderboard empty — visit /ninjabucks to sync from Sheets first');
+  if (!testNinja) return res.json({ steps, success: false });
+
+  // 3. Run the exact same logic the webhook handler runs
+  try {
+    const ninjaName = testNinja.name;
+    await Promise.all([
+      NBLog.create({ ninjaName, buttonAction: 'Webhook Test', amount: 1 }),
+      Ninja.findOneAndUpdate({ name: ninjaName }, { $inc: { totalNinjaBucks: 1 } })
+    ]);
+    const n = d.leaderboard.find(x => x.name === ninjaName);
+    if (n) { n.total += 1; d.markModified('leaderboard'); await d.save(); }
+    step('Webhook handler logic works', true, `+1 NB logged for "${ninjaName}" — check NB Log to confirm the entry appeared`);
+    return res.json({ steps, success: true, testedNinja: ninjaName });
+  } catch(e) {
+    step('Webhook handler logic works', false, e.message);
+    return res.json({ steps, success: false });
+  }
+});
+
 app.get('/admin/test-sheets', isAuthenticated, async (req, res) => {
   const steps = [];
   const step = (label, ok, detail) => steps.push({ label, ok, detail: detail || null });
