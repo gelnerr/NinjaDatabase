@@ -87,15 +87,15 @@
       <h6 class="fw-bold mb-3"><i class="bi bi-info-circle-fill text-primary me-2"></i>NB Earning Legend</h6>
       <div class="row g-2">
         <% [
-          { reasons: ['Completed Build/Quest', 'Published Community Game', 'Daily Activity Challenge', 'Creative'], nb: 1 },
-          { reasons: ['Impact Level Up', 'Got a Stripe'], nb: 2 },
-          { reasons: ['Belt Up', 'Boss Badge', 'Birthday', 'Ninja of the Month', 'Rules of the Dojo'], nb: 5 },
-          { reasons: ['Participated in Game Jam'], nb: 10 }
+          { reasons: ['Completed Build/Quest', 'Published Community Game', 'Daily Activity Challenge', 'Creative'], nb: 1,  bg: '#eff6ff', color: '#1d4ed8', badge: '#3b82f6' },
+          { reasons: ['Impact Level Up', 'Got a Stripe'],                                                           nb: 2,  bg: '#f5f3ff', color: '#6d28d9', badge: '#8b5cf6' },
+          { reasons: ['Belt Up', 'Boss Badge', 'Birthday', 'Ninja of the Month', 'Rules of the Dojo'],             nb: 5,  bg: '#fffbeb', color: '#92400e', badge: '#f59e0b' },
+          { reasons: ['Participated in Game Jam'],                                                                  nb: 10, bg: '#fef2f2', color: '#b91c1c', badge: '#ef4444' }
         ].forEach(group => { %>
           <div class="col-md-6">
-            <div class="d-flex align-items-start gap-2 p-2 rounded-3 bg-light">
-              <span class="badge bg-primary rounded-pill px-3 py-2 fw-bold mt-1" style="min-width:48px; text-align:center;">+<%= group.nb %> NB</span>
-              <div class="small text-muted lh-sm"><%= group.reasons.join(' · ') %></div>
+            <div class="d-flex align-items-start gap-2 p-2 rounded-3" style="background:<%= group.bg %>;">
+              <span class="badge rounded-pill px-3 py-2 fw-bold mt-1" style="background:<%= group.badge %>; min-width:52px; text-align:center;">+<%= group.nb %> NB</span>
+              <div class="small lh-sm fw-semibold" style="color:<%= group.color %>;"><%= group.reasons.join(' · ') %></div>
             </div>
           </div>
         <% }) %>
@@ -107,17 +107,49 @@
 <style>
   #formCard.remove-mode { border-top: 4px solid #dc3545; }
   .reason-pill {
-    cursor: pointer; border: 2px solid #dee2e6; background: white;
-    border-radius: 50px; padding: 6px 16px; font-size: 0.85rem; font-weight: 600;
-    color: #445566; transition: all 0.15s; user-select: none; white-space: nowrap;
+    cursor: pointer; border: 2px solid; border-radius: 50px;
+    padding: 6px 16px; font-size: 0.85rem; font-weight: 600;
+    transition: all 0.15s; user-select: none; white-space: nowrap;
   }
-  .reason-pill:hover { border-color: var(--cn-blue); color: var(--cn-blue); background: #f0f8ff; }
-  .reason-pill.selected { background: var(--cn-blue); border-color: var(--cn-blue); color: white; }
   .reason-pill .nb-badge {
-    display: inline-block; margin-left: 6px; background: rgba(255,255,255,0.25);
-    border-radius: 20px; padding: 1px 8px; font-size: 0.75rem;
+    display: inline-block; margin-left: 6px;
+    border-radius: 20px; padding: 1px 8px; font-size: 0.75rem; font-weight: 700;
   }
-  .reason-pill:not(.selected) .nb-badge { background: #e8f4fb; color: var(--cn-blue); }
+
+  /* +1 NB — blue */
+  .pill-1 { border-color: #93c5fd; color: #1d4ed8; background: #eff6ff; }
+  .pill-1 .nb-badge { background: #bfdbfe; color: #1d4ed8; }
+  .pill-1:hover { background: #dbeafe; border-color: #3b82f6; }
+  .pill-1.selected { background: #3b82f6; border-color: #2563eb; color: white; }
+  .pill-1.selected .nb-badge { background: rgba(255,255,255,0.25); color: white; }
+
+  /* +2 NB — purple */
+  .pill-2 { border-color: #c4b5fd; color: #6d28d9; background: #f5f3ff; }
+  .pill-2 .nb-badge { background: #ddd6fe; color: #6d28d9; }
+  .pill-2:hover { background: #ede9fe; border-color: #8b5cf6; }
+  .pill-2.selected { background: #8b5cf6; border-color: #7c3aed; color: white; }
+  .pill-2.selected .nb-badge { background: rgba(255,255,255,0.25); color: white; }
+
+  /* +5 NB — amber */
+  .pill-5 { border-color: #fcd34d; color: #92400e; background: #fffbeb; }
+  .pill-5 .nb-badge { background: #fde68a; color: #92400e; }
+  .pill-5:hover { background: #fef3c7; border-color: #f59e0b; }
+  .pill-5.selected { background: #f59e0b; border-color: #d97706; color: white; }
+  .pill-5.selected .nb-badge { background: rgba(255,255,255,0.25); color: white; }
+
+  /* +10 NB — red */
+  .pill-10 { border-color: #fca5a5; color: #b91c1c; background: #fef2f2; }
+  .pill-10 .nb-badge { background: #fecaca; color: #b91c1c; }
+  .pill-10:hover { background: #fee2e2; border-color: #ef4444; }
+  .pill-10.selected { background: #ef4444; border-color: #dc2626; color: white; }
+  .pill-10.selected .nb-badge { background: rgba(255,255,255,0.25); color: white; }
+
+  /* Other — gray */
+  .pill-other { border-color: #d1d5db; color: #4b5563; background: #f9fafb; }
+  .pill-other .nb-badge { background: #e5e7eb; color: #4b5563; }
+  .pill-other:hover { background: #f3f4f6; border-color: #9ca3af; }
+  .pill-other.selected { background: #6b7280; border-color: #4b5563; color: white; }
+  .pill-other.selected .nb-badge { background: rgba(255,255,255,0.25); color: white; }
 </style>
 
 <script>
@@ -145,7 +177,8 @@
     container.innerHTML = '';
     AWARD_REASONS.forEach(r => {
       const pill = document.createElement('div');
-      pill.className = 'reason-pill';
+      const colorClass = r.amount === null ? 'pill-other' : `pill-${r.amount}`;
+      pill.className = `reason-pill ${colorClass}`;
       pill.innerHTML = r.label + (r.amount !== null
         ? `<span class="nb-badge">+${r.amount}</span>`
         : `<span class="nb-badge">✏️</span>`);
