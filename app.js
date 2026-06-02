@@ -202,7 +202,7 @@ const pushNBToSheets = async (ninjaName, amount, reason, newTotal) => {
     const row = await findSheetRow(sheets, sid, 'data', 'A', ninjaName);
     if (row) {
       await sheets.spreadsheets.values.update({
-        spreadsheetId: sid, range: `data!F${row}`,
+        spreadsheetId: sid, range: `data!B${row}`,
         valueInputOption: 'RAW', requestBody: { values: [[newTotal]] }
       });
     }
@@ -339,7 +339,7 @@ const deleteFromNBLogSheet = async (ninjaName, amount, reason, newNinjaTotal) =>
     const row = await findSheetRow(sheets, sid, 'data', 'A', ninjaName);
     if (row) {
       await sheets.spreadsheets.values.update({
-        spreadsheetId: sid, range: `data!F${row}`,
+        spreadsheetId: sid, range: `data!B${row}`,
         valueInputOption: 'RAW', requestBody: { values: [[newNinjaTotal]] }
       });
     }
@@ -870,8 +870,8 @@ app.get('/admin/sync-totals', isAuthenticated, async (req, res) => {
     const sheets = await getSheetClient();
     if (sheets) {
       try {
-        const r = await sheets.spreadsheets.values.get({ spreadsheetId: d.mainSpreadsheetId, range: 'data!A:F' });
-        sheetsData = (r.data.values || []).slice(1).map(row => ({ name: row[0]?.trim(), total: parseInt(row[5]) || 0 })).filter(r => r.name);
+        const r = await sheets.spreadsheets.values.get({ spreadsheetId: d.mainSpreadsheetId, range: 'data!A:B' });
+        sheetsData = (r.data.values || []).slice(1).map(row => ({ name: row[0]?.trim(), total: parseInt(row[1]?.toString().replace(/,/g, '')) || 0 })).filter(r => r.name);
       } catch(e) { console.error('sync-totals read error:', e.message); }
     }
   }
@@ -895,7 +895,7 @@ app.post('/admin/sync-totals', isAuthenticated, async (req, res) => {
   try {
     const [ninjas, sheetRes] = await Promise.all([
       Ninja.find({ isActive: true }),
-      sheets.spreadsheets.values.get({ spreadsheetId: d.mainSpreadsheetId, range: 'data!A:F' })
+      sheets.spreadsheets.values.get({ spreadsheetId: d.mainSpreadsheetId, range: 'data!A:B' })
     ]);
     const sheetRows = (sheetRes.data.values || []).slice(1);
     let synced = 0;
@@ -905,7 +905,7 @@ app.post('/admin/sync-totals', isAuthenticated, async (req, res) => {
         const rowIdx = sheetRows.findIndex(r => r[0]?.trim().toLowerCase() === ninja.name.toLowerCase());
         if (rowIdx === -1) continue;
         await sheets.spreadsheets.values.update({
-          spreadsheetId: d.mainSpreadsheetId, range: `data!F${rowIdx + 2}`,
+          spreadsheetId: d.mainSpreadsheetId, range: `data!B${rowIdx + 2}`,
           valueInputOption: 'RAW', requestBody: { values: [[ninja.totalNinjaBucks]] }
         });
         synced++;
@@ -913,7 +913,7 @@ app.post('/admin/sync-totals', isAuthenticated, async (req, res) => {
     } else if (direction === 'sheets-to-mongo') {
       for (const row of sheetRows) {
         const name = row[0]?.trim();
-        const total = parseInt(row[5]) || 0;
+        const total = parseInt(row[1]?.toString().replace(/,/g, '')) || 0;
         if (!name) continue;
         const result = await Ninja.findOneAndUpdate({ name }, { totalNinjaBucks: total });
         if (result) synced++;

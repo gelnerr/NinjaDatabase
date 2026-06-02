@@ -13,7 +13,7 @@
 <div class="page-header d-flex justify-content-between align-items-start">
   <div>
     <h2 class="page-title">NB Totals Reconcile</h2>
-    <p class="text-muted mb-0">Compare Ninja Bucks totals between the website (MongoDB) and Google Sheets (<code>data!F</code>). Sync in either direction.</p>
+    <p class="text-muted mb-0">Compare Ninja Bucks totals between the website (MongoDB) and Google Sheets (<code>data!B</code>). Sync in either direction.</p>
   </div>
   <% if (hasSheets) { %>
   <div class="d-flex gap-2 flex-wrap">
@@ -49,7 +49,7 @@
         <tr>
           <th class="ps-4 py-3">Ninja</th>
           <th class="py-3 text-center">Website (MongoDB)</th>
-          <th class="py-3 text-center">Sheets (data!F)</th>
+          <th class="py-3 text-center">Sheets (data!B)</th>
           <th class="py-3 text-center">Difference</th>
           <th class="py-3 text-center">Status</th>
         </tr>
@@ -108,7 +108,7 @@
 
 <div class="mt-3 p-3 bg-light border rounded-3 small text-muted">
   <strong>Which direction should I choose?</strong><br>
-  Use <strong>Push Website → Sheets</strong> if you trust the website values (MongoDB) — this overwrites <code>data!F</code> for every ninja.<br>
+  Use <strong>Push Website → Sheets</strong> if you trust the website values (MongoDB) — this overwrites <code>data!B</code> for every ninja.<br>
   Use <strong>Pull Sheets → Website</strong> if you trust the spreadsheet values — this overwrites MongoDB totals for every ninja.
 </div>
 
