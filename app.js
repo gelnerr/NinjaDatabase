@@ -195,7 +195,7 @@ const pushNBToSheets = async (ninjaName, amount, reason, newTotal) => {
       range: 'NB Log!A9:D',
       valueInputOption: 'RAW',
       insertDataOption: 'INSERT_ROWS',
-      resource: { values: [[sheetDate(), ninjaName, reason, amtStr]] }
+      requestBody: { values: [[sheetDate(), ninjaName, reason, amtStr]] }
     });
 
     // Update running total in data sheet column F
@@ -203,7 +203,7 @@ const pushNBToSheets = async (ninjaName, amount, reason, newTotal) => {
     if (row) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: sid, range: `data!F${row}`,
-        valueInputOption: 'RAW', resource: { values: [[newTotal]] }
+        valueInputOption: 'RAW', requestBody: { values: [[newTotal]] }
       });
     }
     console.log(`[Sheets] NB sync: ${ninjaName} ${amtStr} → total ${newTotal}`);
@@ -232,7 +232,7 @@ const pushBeltToSheets = async (ninjaName, oldBelt, newBelt, notes) => {
       await sheets.spreadsheets.values.update({
         spreadsheetId: sid, range: `Progress Log!G${nextRow}:K${nextRow}`,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [[dateStr, ninjaName, beltStr, notesStr, false]] }
+        requestBody: { values: [[dateStr, ninjaName, beltStr, notesStr, false]] }
       });
     } else {
       const aRes = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Progress Log!A:A' });
@@ -240,7 +240,7 @@ const pushBeltToSheets = async (ninjaName, oldBelt, newBelt, notes) => {
       await sheets.spreadsheets.values.update({
         spreadsheetId: sid, range: `Progress Log!A${nextRow}:E${nextRow}`,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [[dateStr, ninjaName, beltStr, notesStr, false]] }
+        requestBody: { values: [[dateStr, ninjaName, beltStr, notesStr, false]] }
       });
     }
 
@@ -249,7 +249,7 @@ const pushBeltToSheets = async (ninjaName, oldBelt, newBelt, notes) => {
     if (progRow) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: sid, range: `Progress!B${progRow}`,
-        valueInputOption: 'RAW', resource: { values: [[newBelt]] }
+        valueInputOption: 'RAW', requestBody: { values: [[newBelt]] }
       });
     }
     console.log(`[Sheets] Belt sync: ${ninjaName} → ${newBelt}`);
@@ -790,8 +790,27 @@ app.get('/admin/test-sheets', isAuthenticated, async (req, res) => {
       step('Required sheets present', missing.length === 0,
         missing.length ? `Missing: ${missing.join(', ')} — found: ${sheetNames.join(', ')}` : `All found: ${required.join(', ')}`
       );
+      if (missing.length) return res.json({ steps, success: false });
 
-      return res.json({ steps, success: missing.length === 0 });
+      // 6. Test an actual write (append then immediately clear a test row)
+      try {
+        const testRow = [`[TEST ${Date.now()}]`, 'DiagnosticCheck', 'Connection Test', '+0'];
+        const appendRes = await sheets.spreadsheets.values.append({
+          spreadsheetId: d.mainSpreadsheetId, range: 'NB Log!A9:D',
+          valueInputOption: 'RAW', insertDataOption: 'INSERT_ROWS',
+          requestBody: { values: [testRow] }
+        });
+        const writtenRange = appendRes.data.updates?.updatedRange;
+        if (writtenRange) {
+          await sheets.spreadsheets.values.clear({ spreadsheetId: d.mainSpreadsheetId, range: writtenRange });
+        }
+        step('Write permission confirmed', true, writtenRange ? `Wrote and cleared ${writtenRange}` : 'Write succeeded');
+      } catch(e) {
+        step('Write permission confirmed', false, e.message.includes('403') ? '403 — service account has read-only access, needs Editor role' : e.message);
+        return res.json({ steps, success: false });
+      }
+
+      return res.json({ steps, success: true });
     } catch(e) {
       step('Main spreadsheet accessible', false,
         e.message.includes('403') ? '403 Forbidden — share this spreadsheet with your service account email' : e.message);
