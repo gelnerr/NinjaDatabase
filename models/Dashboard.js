@@ -43,6 +43,7 @@ const dashboardSchema = new mongoose.Schema({
   senseiOfMonth: String,
   senseiVotingLink: String,
   spreadsheetId: String,
+  mainSpreadsheetId: String,
   spreadsheetRange: { type: String, default: 'Ninja Bucks!A2:C150' },
   monthlyRange: { type: String, default: 'Ninja Bucks!E2:F6' },
   shopRange: { type: String, default: 'Shop!A2:C50' },

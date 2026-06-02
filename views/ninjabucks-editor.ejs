@@ -12,21 +12,36 @@
         <h5 class="fw-bold mb-4"><i class="bi bi-google text-primary me-2"></i> Google Sheets Integration</h5>
         
         <div class="mb-4">
-          <label class="form-label small fw-bold text-uppercase text-muted">Spreadsheet ID</label>
+          <label class="form-label small fw-bold text-uppercase text-muted">
+            Display Spreadsheet ID
+            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 ms-2" style="font-size:0.65rem;">Leaderboard read</span>
+          </label>
           <div class="input-group">
-            <span class="input-group-text bg-light border-end-0"><i class="bi bi-link-45deg"></i></span>
-            <input type="text" name="spreadsheetId" class="form-control border-start-0" value="<%= data.spreadsheetId %>" placeholder="e.g. 1aBC...xyz" required>
+            <span class="input-group-text bg-light border-end-0"><i class="bi bi-eye-fill"></i></span>
+            <input type="text" name="spreadsheetId" class="form-control border-start-0" value="<%= data.spreadsheetId %>" placeholder="e.g. 1aBC...xyz">
           </div>
-          <div class="form-text mt-2">Found in the URL of your Google Sheet.</div>
+          <div class="form-text mt-1">The spreadsheet with your <strong>Ninja Bucks</strong> leaderboard sheet. Used to display scores on the public page.</div>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label small fw-bold text-uppercase text-muted">
+            Operational Spreadsheet ID
+            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 ms-2" style="font-size:0.65rem;">Write sync</span>
+          </label>
+          <div class="input-group">
+            <span class="input-group-text bg-light border-end-0"><i class="bi bi-pencil-fill"></i></span>
+            <input type="text" name="mainSpreadsheetId" class="form-control border-start-0" value="<%= data.mainSpreadsheetId || '' %>" placeholder="e.g. 1xYZ...abc">
+          </div>
+          <div class="form-text mt-1">The spreadsheet with <strong>NB Log, data, Progress, Progress Log</strong> sheets. Website changes sync here.</div>
         </div>
 
         <div class="mb-5">
-          <label class="form-label small fw-bold text-uppercase text-muted">Spreadsheet Range</label>
+          <label class="form-label small fw-bold text-uppercase text-muted">Leaderboard Range</label>
           <div class="input-group">
             <span class="input-group-text bg-light border-end-0"><i class="bi bi-grid-3x3"></i></span>
-            <input type="text" name="spreadsheetRange" class="form-control border-start-0" value="<%= data.spreadsheetRange || 'Ninja Bucks!A2:C150' %>" placeholder="e.g. Sheet1!A2:C50" required>
+            <input type="text" name="spreadsheetRange" class="form-control border-start-0" value="<%= data.spreadsheetRange || 'Ninja Bucks!A2:C150' %>" placeholder="e.g. Ninja Bucks!A2:C150">
           </div>
-          <div class="form-text mt-2">Format: <code>'Sheet Name'!A2:C150</code></div>
+          <div class="form-text mt-1">Range within the Display spreadsheet. Format: <code>SheetName!A2:C150</code></div>
         </div>
 
         <div class="d-grid">

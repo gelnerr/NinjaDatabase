@@ -183,10 +183,10 @@ const findSheetRow = async (sheets, spreadsheetId, sheetName, col, name) => {
 const pushNBToSheets = async (ninjaName, amount, reason, newTotal) => {
   try {
     const d = await getDashboardData();
-    if (!d?.spreadsheetId) return;
+    if (!d?.mainSpreadsheetId) return;
     const sheets = await getSheetClient();
     if (!sheets) return;
-    const sid = d.spreadsheetId;
+    const sid = d.mainSpreadsheetId;
 
     // Append log row to NB Log (rows 9+ are the actual log entries)
     const amtStr = amount >= 0 ? `+${amount}` : `${amount}`;
@@ -214,10 +214,10 @@ const pushNBToSheets = async (ninjaName, amount, reason, newTotal) => {
 const pushBeltToSheets = async (ninjaName, oldBelt, newBelt, notes) => {
   try {
     const d = await getDashboardData();
-    if (!d?.spreadsheetId) return;
+    if (!d?.mainSpreadsheetId) return;
     const sheets = await getSheetClient();
     if (!sheets) return;
-    const sid = d.spreadsheetId;
+    const sid = d.mainSpreadsheetId;
 
     // Apps Script uses Unity section (cols G-K) for Purple+, Degrees (cols A-E) for White-Blue
     const UNITY_BELTS = new Set(['Purple', 'Brown', 'Red', 'Black', 'Bronze', 'Silver', 'Platinum', 'Gold', 'Going Gold']);
@@ -678,7 +678,11 @@ app.post('/admin/update-dashboard', isAuthenticated, upload.any(), async (req, r
 
 app.get('/admin/ninjabucks-editor', isAuthenticated, async (req, res) => res.render('ninjabucks-editor', { data: await getDashboardData() }));
 app.post('/admin/update-ninjabucks-config', isAuthenticated, async (req, res) => {
-  const d = await getDashboardData(); d.spreadsheetId = req.body.spreadsheetId; d.spreadsheetRange = req.body.spreadsheetRange; await d.save();
+  const d = await getDashboardData();
+  d.spreadsheetId = req.body.spreadsheetId;
+  d.mainSpreadsheetId = req.body.mainSpreadsheetId;
+  d.spreadsheetRange = req.body.spreadsheetRange;
+  await d.save();
   res.redirect('/admin/ninjabucks-editor');
 });
 
@@ -769,18 +773,19 @@ app.get('/admin/test-sheets', isAuthenticated, async (req, res) => {
     step('Sheets client created', !!sheets);
     if (!sheets) return res.json({ steps, success: false });
 
-    // 4. Spreadsheet ID configured?
     const d = await getDashboardData();
-    step('Spreadsheet ID configured', !!d.spreadsheetId, d.spreadsheetId || 'not set — configure in Ninja Bucks Settings');
-    if (!d.spreadsheetId) return res.json({ steps, success: false });
 
-    // 5. Spreadsheet accessible?
+    // 4. Main (operational) spreadsheet ID configured?
+    step('Main spreadsheet ID configured', !!d.mainSpreadsheetId,
+      d.mainSpreadsheetId || 'not set — paste the ID of the spreadsheet that has NB Log, data, Progress sheets');
+    if (!d.mainSpreadsheetId) return res.json({ steps, success: false });
+
+    // 5. Main spreadsheet accessible + has required sheets?
     try {
-      const info = await sheets.spreadsheets.get({ spreadsheetId: d.spreadsheetId });
+      const info = await sheets.spreadsheets.get({ spreadsheetId: d.mainSpreadsheetId });
       const sheetNames = info.data.sheets.map(s => s.properties.title);
-      step('Spreadsheet accessible', true, `"${info.data.properties.title}" (${sheetNames.length} sheets)`);
+      step('Main spreadsheet accessible', true, `"${info.data.properties.title}" — sheets: ${sheetNames.join(', ')}`);
 
-      // 6. Required sheets present?
       const required = ['NB Log', 'data', 'Progress', 'Progress Log'];
       const missing = required.filter(n => !sheetNames.includes(n));
       step('Required sheets present', missing.length === 0,
@@ -789,7 +794,8 @@ app.get('/admin/test-sheets', isAuthenticated, async (req, res) => {
 
       return res.json({ steps, success: missing.length === 0 });
     } catch(e) {
-      step('Spreadsheet accessible', false, e.message.includes('403') ? '403 Forbidden — share the spreadsheet with your service account email' : e.message);
+      step('Main spreadsheet accessible', false,
+        e.message.includes('403') ? '403 Forbidden — share this spreadsheet with your service account email' : e.message);
       return res.json({ steps, success: false });
     }
   } catch(e) {
