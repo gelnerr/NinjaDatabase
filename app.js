@@ -366,12 +366,11 @@ app.post('/admin/ninjas/:id/update-belt', isAuthenticated, async (req, res) => {
   
   if (old !== n.currentBelt) {
     const notes = req.body.notes || 'Manual Update';
-    await ProgressLog.create({
-      ninjaName: n.name, oldBelt: old, newBelt: n.currentBelt, notes, discordPosted: true
-    });
-    await sendDiscordNotification(n.name, old, n.currentBelt, notes);
-    // Fire-and-forget: sync belt change to Google Sheets
-    pushBeltToSheets(n.name, old, n.currentBelt, notes).catch(() => {});
+    await Promise.all([
+      ProgressLog.create({ ninjaName: n.name, oldBelt: old, newBelt: n.currentBelt, notes, discordPosted: true }),
+      sendDiscordNotification(n.name, old, n.currentBelt, notes),
+      pushBeltToSheets(n.name, old, n.currentBelt, notes).catch(e => console.error('[Sheets] Belt push failed:', e.message))
+    ]);
   }
   res.json({ success: true });
 });
@@ -701,15 +700,15 @@ app.post('/admin/update-ninja-bucks', isAuthenticated, async (req, res) => {
   const n = d.leaderboard.find(x => x.name === ninjaName);
   if (!n) return res.status(404).json({ error: 'Not found in leaderboard' });
 
-  n.total += parsedAmount; d.markModified('leaderboard'); await d.save();
-  await NBLog.create({ ninjaName, buttonAction: reason, amount: parsedAmount });
-  const updated = await Ninja.findOneAndUpdate(
-    { name: ninjaName }, { $inc: { totalNinjaBucks: parsedAmount } }, { new: true }
-  );
-  const newTotal = updated?.totalNinjaBucks ?? parsedAmount;
+  n.total += parsedAmount; d.markModified('leaderboard');
 
-  // Fire-and-forget: sync to Google Sheets without blocking the response
-  pushNBToSheets(ninjaName, parsedAmount, reason, newTotal).catch(() => {});
+  // Run all writes in parallel — DB saves + Sheets push finish before we respond
+  const [, , updated] = await Promise.all([
+    d.save(),
+    NBLog.create({ ninjaName, buttonAction: reason, amount: parsedAmount }),
+    Ninja.findOneAndUpdate({ name: ninjaName }, { $inc: { totalNinjaBucks: parsedAmount } }, { new: true }),
+    pushNBToSheets(ninjaName, parsedAmount, reason, n.total + parsedAmount).catch(e => console.error('[Sheets] NB push failed:', e.message))
+  ]);
 
   res.json({ success: true, newTotal: n.total });
 });
