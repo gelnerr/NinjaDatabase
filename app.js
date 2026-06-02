@@ -300,6 +300,65 @@ const getNewBelt = (oldBelt, degree) => {
   return b || 'White';
 };
 
+// ── Sheets → Website webhook ──────────────────────────────────────────────────
+// Called by Apps Script after every button action or belt update.
+// Secured by SHEETS_WEBHOOK_SECRET env var (must match Script Property on Sheets side).
+app.post('/api/sheets-webhook', async (req, res) => {
+  const secret = req.body.secret;
+  if (!secret || secret !== process.env.SHEETS_WEBHOOK_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { type, ninjaName, amount, reason, newBelt, notes } = req.body;
+
+  try {
+    if (type === 'nb_award') {
+      const parsedAmount = parseInt(amount) || 0;
+      if (!ninjaName || parsedAmount === 0) return res.status(400).json({ error: 'Invalid payload' });
+
+      // Write to MongoDB — do NOT call pushNBToSheets (data already came FROM sheets)
+      await Promise.all([
+        NBLog.create({ ninjaName, buttonAction: reason || 'Sheets Award', amount: parsedAmount }),
+        Ninja.findOneAndUpdate({ name: ninjaName }, { $inc: { totalNinjaBucks: parsedAmount } })
+      ]);
+
+      // Keep the in-memory leaderboard cache in sync
+      const d = await getDashboardData();
+      const n = d.leaderboard.find(x => x.name === ninjaName);
+      if (n) { n.total += parsedAmount; d.markModified('leaderboard'); await d.save(); }
+
+      console.log(`[Webhook] NB ${parsedAmount > 0 ? '+' : ''}${parsedAmount} for ${ninjaName} (${reason})`);
+      return res.json({ success: true });
+    }
+
+    if (type === 'belt_update') {
+      if (!ninjaName || !newBelt) return res.status(400).json({ error: 'Invalid payload' });
+
+      const ninja = await Ninja.findOne({ name: ninjaName });
+      if (!ninja) return res.status(404).json({ error: `Ninja "${ninjaName}" not found` });
+
+      const oldBelt = ninja.currentBelt;
+      if (oldBelt !== newBelt) {
+        ninja.currentBelt = newBelt;
+        // Do NOT call pushBeltToSheets — change already came FROM sheets
+        await Promise.all([
+          ninja.save(),
+          ProgressLog.create({ ninjaName, oldBelt, newBelt, notes: notes || 'Sheets Update', discordPosted: true }),
+          sendDiscordNotification(ninjaName, oldBelt, newBelt, notes || 'Sheets Update')
+        ]);
+        console.log(`[Webhook] Belt: ${ninjaName} ${oldBelt} → ${newBelt}`);
+      }
+      return res.json({ success: true });
+    }
+
+    return res.status(400).json({ error: `Unknown event type: ${type}` });
+  } catch(e) {
+    console.error('[Webhook] Error:', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.get('/', async (req, res) => {
   const data = await getDashboardData();
   if (req.query.theme) data.theme = req.query.theme;
