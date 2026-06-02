@@ -1,0 +1,146 @@
+<%- include('partials/admin-header', { title: 'Sync NB Totals', active: 'nb-editor' }) %>
+
+<!-- Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999;">
+  <div id="syncToast" class="toast align-items-center text-white border-0 shadow" role="alert">
+    <div class="d-flex">
+      <div class="toast-body fw-bold" id="syncToastMsg">Done!</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<div class="page-header d-flex justify-content-between align-items-start">
+  <div>
+    <h2 class="page-title">NB Totals Reconcile</h2>
+    <p class="text-muted mb-0">Compare Ninja Bucks totals between the website (MongoDB) and Google Sheets (<code>data!F</code>). Sync in either direction.</p>
+  </div>
+  <% if (hasSheets) { %>
+  <div class="d-flex gap-2 flex-wrap">
+    <button class="btn btn-primary rounded-pill px-4 fw-bold" onclick="syncAll('mongo-to-sheets')">
+      <i class="bi bi-cloud-upload-fill me-2"></i>Push Website → Sheets
+    </button>
+    <button class="btn btn-warning rounded-pill px-4 fw-bold" onclick="syncAll('sheets-to-mongo')">
+      <i class="bi bi-cloud-download-fill me-2"></i>Pull Sheets → Website
+    </button>
+  </div>
+  <% } %>
+</div>
+
+<% if (!hasSheets) { %>
+  <div class="alert alert-warning rounded-3">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    No operational spreadsheet configured. Go to <a href="/admin/ninjabucks-editor" class="fw-bold">Ninja Bucks Settings</a> and add the Operational Spreadsheet ID first.
+  </div>
+<% } %>
+
+<div class="admin-card overflow-hidden shadow-sm">
+  <div class="p-4 border-bottom bg-light d-flex justify-content-between align-items-center">
+    <div class="fw-bold text-dark"><i class="bi bi-arrow-left-right me-2"></i>Value Comparison</div>
+    <div class="d-flex gap-3 small text-muted">
+      <span><span class="badge bg-success-subtle text-success border border-success border-opacity-25">In Sync</span> values match</span>
+      <span><span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25">Mismatch</span> values differ</span>
+      <span><span class="badge bg-secondary-subtle text-secondary border">Not Found</span> not in sheets</span>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" id="reconcileTable">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-4 py-3">Ninja</th>
+          <th class="py-3 text-center">Website (MongoDB)</th>
+          <th class="py-3 text-center">Sheets (data!F)</th>
+          <th class="py-3 text-center">Difference</th>
+          <th class="py-3 text-center">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(row => {
+          const inSync = row.diff === 0;
+          const notFound = row.sheets === null;
+          const mismatch = !inSync && !notFound;
+        %>
+          <tr class="<%= mismatch ? 'table-warning' : '' %>">
+            <td class="ps-4 fw-bold text-dark"><%= row.name %></td>
+            <td class="text-center">
+              <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-2 fw-bold">
+                <i class="bi bi-coin me-1"></i><%= row.mongo.toLocaleString() %>
+              </span>
+            </td>
+            <td class="text-center">
+              <% if (notFound) { %>
+                <span class="text-muted small fst-italic">not in sheets</span>
+              <% } else { %>
+                <span class="badge bg-secondary bg-opacity-10 text-dark border px-3 py-2 fw-bold">
+                  <i class="bi bi-table me-1"></i><%= row.sheets.toLocaleString() %>
+                </span>
+              <% } %>
+            </td>
+            <td class="text-center fw-bold">
+              <% if (notFound) { %>
+                <span class="text-muted">—</span>
+              <% } else if (inSync) { %>
+                <span class="text-success">0</span>
+              <% } else { %>
+                <span class="<%= row.diff > 0 ? 'text-primary' : 'text-danger' %>">
+                  <%= row.diff > 0 ? '+' : '' %><%= row.diff.toLocaleString() %>
+                </span>
+              <% } %>
+            </td>
+            <td class="text-center">
+              <% if (notFound) { %>
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary border-opacity-25">Not in Sheets</span>
+              <% } else if (inSync) { %>
+                <span class="badge bg-success-subtle text-success border border-success border-opacity-25">In Sync</span>
+              <% } else { %>
+                <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25">Mismatch</span>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (rows.length === 0) { %>
+          <tr><td colspan="5" class="text-center py-5 text-muted">No active ninjas found.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="mt-3 p-3 bg-light border rounded-3 small text-muted">
+  <strong>Which direction should I choose?</strong><br>
+  Use <strong>Push Website → Sheets</strong> if you trust the website values (MongoDB) — this overwrites <code>data!F</code> for every ninja.<br>
+  Use <strong>Pull Sheets → Website</strong> if you trust the spreadsheet values — this overwrites MongoDB totals for every ninja.
+</div>
+
+<script>
+  function showToast(msg, type = 'success') {
+    const el = document.getElementById('syncToast');
+    document.getElementById('syncToastMsg').textContent = msg;
+    el.className = `toast align-items-center text-white bg-${type} border-0 shadow`;
+    bootstrap.Toast.getOrCreateInstance(el, { delay: 4000 }).show();
+  }
+
+  async function syncAll(direction) {
+    const label = direction === 'mongo-to-sheets' ? 'Push Website → Sheets' : 'Pull Sheets → Website';
+    if (!confirm(`Run "${label}" for ALL ninjas? This will overwrite values on the ${direction === 'mongo-to-sheets' ? 'spreadsheet' : 'website'}.`)) return;
+
+    showToast('Syncing... this may take a few seconds.', 'primary');
+
+    try {
+      const res = await fetch('/admin/sync-totals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ direction })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Done! ${data.synced} ninja totals synced.`);
+        setTimeout(() => location.reload(), 2000);
+      } else {
+        showToast('Error: ' + data.error, 'danger');
+      }
+    } catch(e) { showToast('Network error.', 'danger'); }
+  }
+</script>
+
+<%- include('partials/admin-footer') %>

@@ -860,6 +860,71 @@ app.post('/admin/update-shop', isAuthenticated, async (req, res) => {
   d.shopItems = s; await d.save(); res.redirect('/admin/shop-editor');
 });
 
+// ── NB Totals Reconcile ───────────────────────────────────────────────────────
+app.get('/admin/sync-totals', isAuthenticated, async (req, res) => {
+  const d = await getDashboardData();
+  const ninjas = await Ninja.find({ isActive: true }).sort({ name: 1 });
+  let sheetsData = [];
+
+  if (d.mainSpreadsheetId) {
+    const sheets = await getSheetClient();
+    if (sheets) {
+      try {
+        const r = await sheets.spreadsheets.values.get({ spreadsheetId: d.mainSpreadsheetId, range: 'data!A:F' });
+        sheetsData = (r.data.values || []).slice(1).map(row => ({ name: row[0]?.trim(), total: parseInt(row[5]) || 0 })).filter(r => r.name);
+      } catch(e) { console.error('sync-totals read error:', e.message); }
+    }
+  }
+
+  const rows = ninjas.map(n => {
+    const s = sheetsData.find(r => r.name.toLowerCase() === n.name.toLowerCase());
+    return { id: n._id, name: n.name, mongo: n.totalNinjaBucks, sheets: s?.total ?? null, diff: s ? n.totalNinjaBucks - s.total : null };
+  });
+
+  res.render('sync-totals', { rows, hasSheets: !!d.mainSpreadsheetId });
+});
+
+app.post('/admin/sync-totals', isAuthenticated, async (req, res) => {
+  const { direction } = req.body; // 'mongo-to-sheets' or 'sheets-to-mongo'
+  const d = await getDashboardData();
+  if (!d.mainSpreadsheetId) return res.status(400).json({ error: 'No operational spreadsheet configured' });
+
+  const sheets = await getSheetClient();
+  if (!sheets) return res.status(500).json({ error: 'Sheets auth failed' });
+
+  try {
+    const [ninjas, sheetRes] = await Promise.all([
+      Ninja.find({ isActive: true }),
+      sheets.spreadsheets.values.get({ spreadsheetId: d.mainSpreadsheetId, range: 'data!A:F' })
+    ]);
+    const sheetRows = (sheetRes.data.values || []).slice(1);
+    let synced = 0;
+
+    if (direction === 'mongo-to-sheets') {
+      for (const ninja of ninjas) {
+        const rowIdx = sheetRows.findIndex(r => r[0]?.trim().toLowerCase() === ninja.name.toLowerCase());
+        if (rowIdx === -1) continue;
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: d.mainSpreadsheetId, range: `data!F${rowIdx + 2}`,
+          valueInputOption: 'RAW', requestBody: { values: [[ninja.totalNinjaBucks]] }
+        });
+        synced++;
+      }
+    } else if (direction === 'sheets-to-mongo') {
+      for (const row of sheetRows) {
+        const name = row[0]?.trim();
+        const total = parseInt(row[5]) || 0;
+        if (!name) continue;
+        const result = await Ninja.findOneAndUpdate({ name }, { totalNinjaBucks: total });
+        if (result) synced++;
+      }
+    }
+
+    res.json({ success: true, synced });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.get('/admin/ninja-bucks-award', isAuthenticated, async (req, res) => res.render('ninja-bucks-award', { leaderboard: (await getDashboardData()).leaderboard }));
 app.post('/admin/update-ninja-bucks', isAuthenticated, async (req, res) => {
   const d = await getDashboardData();
