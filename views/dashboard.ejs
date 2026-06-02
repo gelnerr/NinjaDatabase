@@ -678,26 +678,30 @@
       </div>
     </div>
 
+    <!-- Fun Fact — standalone, no boss info -->
     <div class="kid-card animated" style="animation-delay: -4s;">
       <h2>Fun Fact</h2>
       <div class="fun-fact-text">
         "<%= funFact %>"
       </div>
-      <% if (bossActive) { %>
-        <div id="bossWidget" onclick="openBossOverlay()" style="cursor: pointer; margin-top: 18px; border-top: 2px dashed rgba(0,0,0,0.1); padding-top: 14px; text-align: center;">
-          <div class="boss-live-badge" style="display: inline-block; background: #e63946; color: white; font-size: 0.65rem; font-weight: 800; letter-spacing: 2px; padding: 3px 10px; border-radius: 20px; margin-bottom: 10px; text-transform: uppercase;">⚔ BOSS BATTLE LIVE</div>
-          <img src="<%= bossImage || '/img/cn_logo.png' %>" alt="<%= bossName %>" style="width: min(220px, 80%); height: auto; object-fit: contain; display: block; margin: 0 auto 12px; filter: drop-shadow(0 6px 18px rgba(230,57,70,0.35));">
-          <div style="font-weight: 800; font-size: 0.9rem; margin-bottom: 6px;"><%= bossName %></div>
-          <div class="boss-widget-hp-outer" style="height: 10px; background: rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden;">
-            <div class="boss-widget-hp-inner" style="height: 100%; width: <%= bossMaxHP > 0 ? Math.round((bossHP / bossMaxHP) * 100) : 0 %>%; background: #e63946; border-radius: 10px; transition: width 1s ease;"></div>
-          </div>
-          <div style="font-size: 0.7rem; opacity: 0.6; margin-top: 4px;"><%= bossHP.toLocaleString() %> / <%= bossMaxHP.toLocaleString() %> HP</div>
-          <div style="font-size: 0.65rem; opacity: 0.5; margin-top: 6px;">Tap to enter the battle &rsaquo;</div>
-        </div>
-      <% } %>
     </div>
 
-    <div class="kid-card animated" style="animation-delay: -5s; grid-column: span 3;">
+    <!-- Boss Battle — own card, only shown when active -->
+    <% if (bossActive) { %>
+    <div id="bossWidget" class="kid-card animated" onclick="openBossOverlay()"
+      style="cursor: pointer; animation-delay: -4.5s; border-color: #e63946; box-shadow: 0 10px 0px #b91c1c; text-align: center;">
+      <div style="display: inline-block; background: #e63946; color: white; font-size: 0.65rem; font-weight: 800; letter-spacing: 2px; padding: 3px 12px; border-radius: 20px; margin-bottom: 12px; text-transform: uppercase;">⚔ Boss Battle Live</div>
+      <h2 style="margin-bottom: 10px;"><%= bossName %></h2>
+      <img src="<%= bossImage || '/img/cn_logo.png' %>" alt="<%= bossName %>" style="width: min(200px, 75%); height: auto; object-fit: contain; display: block; margin: 0 auto 14px; filter: drop-shadow(0 6px 20px rgba(230,57,70,0.45));">
+      <div class="boss-widget-hp-outer" style="height: 14px; background: rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden; margin-bottom: 6px;">
+        <div class="boss-widget-hp-inner" style="height: 100%; width: <%= bossMaxHP > 0 ? Math.round((bossHP / bossMaxHP) * 100) : 0 %>%; background: linear-gradient(90deg, #e63946, #ff6b6b); border-radius: 10px; transition: width 1s ease;"></div>
+      </div>
+      <div style="font-size: 0.8rem; font-weight: 700; opacity: 0.7; margin-bottom: 8px;"><%= bossHP.toLocaleString() %> / <%= bossMaxHP.toLocaleString() %> HP</div>
+      <div style="font-size: 0.7rem; opacity: 0.4; letter-spacing: 1px;">TAP TO ENTER THE BATTLE &rsaquo;</div>
+    </div>
+    <% } %>
+
+    <div class="kid-card animated" style="animation-delay: -5s; grid-column: span <%= bossActive ? 2 : 3 %>;">
       <h2>Sensei of the Month</h2>
       <div class="sensei-box">
         <div class="sensei-name" style="font-size: 1.8rem; font-weight: bold; margin-bottom: 10px;">
