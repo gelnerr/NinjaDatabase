@@ -747,6 +747,57 @@ app.post('/admin/progress-log/post-discord', isAuthenticated, async (req, res) =
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
+app.get('/admin/test-sheets', isAuthenticated, async (req, res) => {
+  const steps = [];
+  const step = (label, ok, detail) => steps.push({ label, ok, detail: detail || null });
+
+  try {
+    // 1. Credentials present?
+    const hasEnv = !!process.env.GOOGLE_CREDENTIALS;
+    const hasFile = fs.existsSync(path.join(__dirname, 'credentials.json'));
+    step('Credentials found', hasEnv || hasFile, hasEnv ? 'env var (GOOGLE_CREDENTIALS)' : hasFile ? 'credentials.json file' : 'neither found');
+    if (!hasEnv && !hasFile) return res.json({ steps, success: false });
+
+    // 2. Credentials JSON valid?
+    if (hasEnv) {
+      try { JSON.parse(process.env.GOOGLE_CREDENTIALS); step('Credentials JSON parseable', true); }
+      catch(e) { step('Credentials JSON parseable', false, e.message); return res.json({ steps, success: false }); }
+    }
+
+    // 3. Can we build the Sheets client?
+    const sheets = await getSheetClient();
+    step('Sheets client created', !!sheets);
+    if (!sheets) return res.json({ steps, success: false });
+
+    // 4. Spreadsheet ID configured?
+    const d = await getDashboardData();
+    step('Spreadsheet ID configured', !!d.spreadsheetId, d.spreadsheetId || 'not set — configure in Ninja Bucks Settings');
+    if (!d.spreadsheetId) return res.json({ steps, success: false });
+
+    // 5. Spreadsheet accessible?
+    try {
+      const info = await sheets.spreadsheets.get({ spreadsheetId: d.spreadsheetId });
+      const sheetNames = info.data.sheets.map(s => s.properties.title);
+      step('Spreadsheet accessible', true, `"${info.data.properties.title}" (${sheetNames.length} sheets)`);
+
+      // 6. Required sheets present?
+      const required = ['NB Log', 'data', 'Progress', 'Progress Log'];
+      const missing = required.filter(n => !sheetNames.includes(n));
+      step('Required sheets present', missing.length === 0,
+        missing.length ? `Missing: ${missing.join(', ')} — found: ${sheetNames.join(', ')}` : `All found: ${required.join(', ')}`
+      );
+
+      return res.json({ steps, success: missing.length === 0 });
+    } catch(e) {
+      step('Spreadsheet accessible', false, e.message.includes('403') ? '403 Forbidden — share the spreadsheet with your service account email' : e.message);
+      return res.json({ steps, success: false });
+    }
+  } catch(e) {
+    step('Unexpected error', false, e.message);
+    return res.json({ steps, success: false });
+  }
+});
+
 app.get('/admin/notm-archive-editor', isAuthenticated, async (req, res) => {
   const archive = await HallOfFame.find({}).sort({ year: -1, _id: -1 });
   res.render('notm-archive-editor', { data: await getDashboardData(), archive });
