@@ -869,13 +869,13 @@ app.post('/admin/update-ninja-bucks', isAuthenticated, async (req, res) => {
   if (!n) return res.status(404).json({ error: 'Not found in leaderboard' });
 
   n.total += parsedAmount; d.markModified('leaderboard');
+  // n.total is already the new value — do NOT add parsedAmount again
 
-  // Run all writes in parallel — DB saves + Sheets push finish before we respond
-  const [, , updated] = await Promise.all([
+  await Promise.all([
     d.save(),
     NBLog.create({ ninjaName, buttonAction: reason, amount: parsedAmount }),
     Ninja.findOneAndUpdate({ name: ninjaName }, { $inc: { totalNinjaBucks: parsedAmount } }, { new: true }),
-    pushNBToSheets(ninjaName, parsedAmount, reason, n.total + parsedAmount).catch(e => console.error('[Sheets] NB push failed:', e.message))
+    pushNBToSheets(ninjaName, parsedAmount, reason, n.total).catch(e => console.error('[Sheets] NB push failed:', e.message))
   ]);
 
   res.json({ success: true, newTotal: n.total });
