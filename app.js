@@ -257,6 +257,41 @@ const pushBeltToSheets = async (ninjaName, oldBelt, newBelt, notes) => {
 };
 
 // Delete a row from the NB Log sheet and update the ninja's total in data sheet
+// Write damage dealt to column E of the matching NB Log row in the sheet
+const pushDamageToSheets = async (ninjaName, amount, reason, damageDealt) => {
+  try {
+    const d = await getDashboardData();
+    if (!d?.mainSpreadsheetId) return;
+    const sheets = await getSheetClient();
+    if (!sheets) return;
+    const sid = d.mainSpreadsheetId;
+
+    const logRes = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'NB Log!A9:D' });
+    const rows = logRes.data.values || [];
+    const amtStr = amount >= 0 ? `+${amount}` : `${amount}`;
+
+    let matchIndex = -1;
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (rows[i][1]?.trim() === ninjaName &&
+          rows[i][2]?.trim() === reason &&
+          rows[i][3]?.trim() === amtStr) {
+        matchIndex = i;
+        break;
+      }
+    }
+
+    if (matchIndex === -1) { console.log(`[Sheets] No matching row for damage: ${ninjaName}`); return; }
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: sid,
+      range: `NB Log!E${9 + matchIndex}`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [[damageDealt]] }
+    });
+    console.log(`[Sheets] Damage ${damageDealt} → NB Log row ${9 + matchIndex}`);
+  } catch(e) { console.error('[Sheets] pushDamageToSheets error:', e.message); }
+};
+
 const deleteFromNBLogSheet = async (ninjaName, amount, reason, newNinjaTotal) => {
   try {
     const d = await getDashboardData();
@@ -404,6 +439,25 @@ app.post('/api/sheets-webhook', async (req, res) => {
         console.log(`[Webhook] Belt: ${ninjaName} ${oldBelt} → ${newBelt}`);
       }
       return res.json({ success: true });
+    }
+
+    if (type === 'damage_update') {
+      const parsedDamage = parseInt(req.body.damageDealt) || 0;
+      const parsedAmount = parseInt(req.body.amount) || 0;
+      if (!ninjaName || parsedDamage <= 0) return res.status(400).json({ error: 'Invalid payload' });
+
+      // Find the most recent matching log entry for this ninja/action
+      const log = await NBLog.findOne({ ninjaName, amount: parsedAmount, buttonAction: reason }).sort({ date: -1 });
+      if (!log) return res.status(404).json({ error: `No matching log entry for ${ninjaName}` });
+
+      const oldDmg = log.damageDealt || 0;
+      const d = await getDashboardData();
+      d.bossHP = Math.max(0, Math.min(d.bossMaxHP, d.bossHP + oldDmg - parsedDamage));
+      log.damageDealt = parsedDamage;
+      await Promise.all([d.save(), log.save()]);
+
+      console.log(`[Webhook] Damage update: ${ninjaName} dealt ${parsedDamage}, boss HP now ${d.bossHP}`);
+      return res.json({ success: true, newHP: d.bossHP });
     }
 
     return res.status(400).json({ error: `Unknown event type: ${type}` });
@@ -856,10 +910,18 @@ app.post('/admin/nb-log/delete/:id', isAuthenticated, async (req, res) => {
 
 app.post('/admin/nb-log/update-damage/:id', isAuthenticated, async (req, res) => {
   try {
-    const log = await NBLog.findById(req.params.id); if (!log) return res.status(404).json({ error: 'Log not found' });
-    const d = await getDashboardData(); const oldDmg = log.damageDealt || 0; const newDmg = parseInt(req.body.damageDealt) || 0;
-    d.bossHP = Math.max(0, Math.min(d.bossMaxHP, d.bossHP + oldDmg - newDmg)); await d.save();
-    log.damageDealt = newDmg; await log.save();
+    const log = await NBLog.findById(req.params.id);
+    if (!log) return res.status(404).json({ error: 'Log not found' });
+    const d = await getDashboardData();
+    const oldDmg = log.damageDealt || 0;
+    const newDmg = parseInt(req.body.damageDealt) || 0;
+    d.bossHP = Math.max(0, Math.min(d.bossMaxHP, d.bossHP + oldDmg - newDmg));
+    log.damageDealt = newDmg;
+    await Promise.all([
+      d.save(),
+      log.save(),
+      pushDamageToSheets(log.ninjaName, log.amount, log.buttonAction, newDmg)
+    ]);
     res.json({ success: true, newHP: d.bossHP });
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
