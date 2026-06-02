@@ -12,9 +12,8 @@
 <div class="page-header d-flex justify-content-between align-items-center">
   <div>
     <h2 class="page-title" id="pageTitle">Award Ninja Bucks</h2>
-    <p class="text-muted mb-0" id="pageSubtitle">Instantly reward achievements, projects, or birthdays.</p>
+    <p class="text-muted mb-0" id="pageSubtitle">Select a reason — the amount auto-fills to the standard value.</p>
   </div>
-  <!-- Award / Remove toggle -->
   <div class="d-flex align-items-center gap-2 bg-white border rounded-pill p-1 shadow-sm">
     <button id="awardTab" class="btn btn-primary rounded-pill px-4 py-2 fw-bold" onclick="setMode('award')">
       <i class="bi bi-plus-circle-fill me-2"></i>Award
@@ -26,51 +25,80 @@
 </div>
 
 <div class="row justify-content-center">
-  <div class="col-lg-8">
+  <div class="col-lg-9">
     <div id="formCard" class="admin-card p-4 p-md-5 shadow-sm">
 
-      <div class="row mb-4">
-        <div class="col-md-12">
-          <label class="form-label fw-bold text-dark">1. Select Ninja</label>
-          <div class="input-group">
-            <span class="input-group-text bg-white border-end-0"><i class="bi bi-person-search"></i></span>
-            <input type="text" id="ninjaSearch" class="form-control border-start-0" placeholder="Search by name..." list="ninjaOptions">
-            <datalist id="ninjaOptions">
-              <% leaderboard.forEach(n => { %>
-                <option value="<%= n.name %>">
-              <% }); %>
-            </datalist>
-          </div>
+      <!-- Ninja selector -->
+      <div class="mb-4">
+        <label class="form-label fw-bold text-dark">1. Select Ninja</label>
+        <div class="input-group">
+          <span class="input-group-text bg-white border-end-0"><i class="bi bi-person-search"></i></span>
+          <input type="text" id="ninjaSearch" class="form-control border-start-0" placeholder="Search by name..." list="ninjaOptions">
+          <datalist id="ninjaOptions">
+            <% leaderboard.forEach(n => { %>
+              <option value="<%= n.name %>">
+            <% }); %>
+          </datalist>
         </div>
       </div>
 
-      <div class="row mb-4">
-        <div class="col-md-6">
-          <label class="form-label fw-bold text-dark" id="amountLabel">2. Amount (NB)</label>
-          <div class="input-group input-group-lg">
-            <span class="input-group-text" id="amountPrefix" style="background:#fffbeb; border-color:#fde68a; color:#92400e;"><i class="bi bi-coin"></i></span>
-            <input type="number" id="amount" class="form-control" placeholder="0" min="1">
-          </div>
-          <div class="d-flex gap-2 mt-2" id="quickAmounts">
-            <button class="btn btn-sm btn-light border flex-grow-1" onclick="setAmount(1)">1</button>
-            <button class="btn btn-sm btn-light border flex-grow-1" onclick="setAmount(2)">2</button>
-            <button class="btn btn-sm btn-light border flex-grow-1" onclick="setAmount(5)">5</button>
-            <button class="btn btn-sm btn-light border flex-grow-1" onclick="setAmount(10)">10</button>
-            <button class="btn btn-sm btn-light border flex-grow-1" onclick="setAmount(25)">25</button>
-          </div>
+      <!-- Reason pills (award mode) -->
+      <div id="awardReasonSection" class="mb-4">
+        <label class="form-label fw-bold text-dark">2. Reason <span class="text-muted fw-normal small">(tap to select &amp; auto-fill amount)</span></label>
+        <div id="reasonPills" class="d-flex flex-wrap gap-2 mb-3">
+          <!-- Populated by JS -->
         </div>
-        <div class="col-md-6">
-          <label class="form-label fw-bold text-dark">3. Reason</label>
-          <select id="reason" class="form-select form-select-lg">
-            <!-- Options swapped by JS based on mode -->
-          </select>
+        <!-- Other: custom text input, hidden until "Other" is picked -->
+        <div id="otherReasonWrap" style="display:none;">
+          <input type="text" id="otherReasonText" class="form-control" placeholder="Describe the reason..." maxlength="60">
         </div>
       </div>
 
-      <div class="d-grid mt-4">
+      <!-- Reason dropdown (remove mode) -->
+      <div id="removeReasonSection" class="mb-4" style="display:none;">
+        <label class="form-label fw-bold text-dark">2. Reason</label>
+        <select id="removeReason" class="form-select form-select-lg">
+          <option value="Shop Purchase">Shop Purchase</option>
+          <option value="Merch Redemption">Merch Redemption</option>
+          <option value="Event Ticket">Event Ticket</option>
+          <option value="Manual Deduction">Manual Deduction</option>
+          <option value="Correction / Reversal">Correction / Reversal</option>
+        </select>
+      </div>
+
+      <!-- Amount -->
+      <div class="mb-5">
+        <label class="form-label fw-bold text-dark">3. Amount (NB)</label>
+        <div class="input-group input-group-lg">
+          <span class="input-group-text" id="amountPrefix" style="background:#fffbeb; border-color:#fde68a; color:#92400e;"><i class="bi bi-coin"></i></span>
+          <input type="number" id="amount" class="form-control" placeholder="0" min="1">
+        </div>
+      </div>
+
+      <div class="d-grid">
         <button id="actionBtn" class="btn btn-primary btn-lg rounded-pill py-3 fw-bold shadow" onclick="submitAction()">
           <i class="bi bi-award-fill me-2"></i> Confirm Award
         </button>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div id="legendCard" class="admin-card p-4 shadow-sm mt-4">
+      <h6 class="fw-bold mb-3"><i class="bi bi-info-circle-fill text-primary me-2"></i>NB Earning Legend</h6>
+      <div class="row g-2">
+        <% [
+          { reasons: ['Completed Build/Quest', 'Published Community Game', 'Daily Activity Challenge', 'Creative'], nb: 1 },
+          { reasons: ['Impact Level Up', 'Got a Stripe'], nb: 2 },
+          { reasons: ['Belt Up', 'Boss Badge', 'Birthday', 'Ninja of the Month', 'Rules of the Dojo'], nb: 5 },
+          { reasons: ['Participated in Game Jam'], nb: 10 }
+        ].forEach(group => { %>
+          <div class="col-md-6">
+            <div class="d-flex align-items-start gap-2 p-2 rounded-3 bg-light">
+              <span class="badge bg-primary rounded-pill px-3 py-2 fw-bold mt-1" style="min-width:48px; text-align:center;">+<%= group.nb %> NB</span>
+              <div class="small text-muted lh-sm"><%= group.reasons.join(' · ') %></div>
+            </div>
+          </div>
+        <% }) %>
       </div>
     </div>
   </div>
@@ -78,47 +106,88 @@
 
 <style>
   #formCard.remove-mode { border-top: 4px solid #dc3545; }
+  .reason-pill {
+    cursor: pointer; border: 2px solid #dee2e6; background: white;
+    border-radius: 50px; padding: 6px 16px; font-size: 0.85rem; font-weight: 600;
+    color: #445566; transition: all 0.15s; user-select: none; white-space: nowrap;
+  }
+  .reason-pill:hover { border-color: var(--cn-blue); color: var(--cn-blue); background: #f0f8ff; }
+  .reason-pill.selected { background: var(--cn-blue); border-color: var(--cn-blue); color: white; }
+  .reason-pill .nb-badge {
+    display: inline-block; margin-left: 6px; background: rgba(255,255,255,0.25);
+    border-radius: 20px; padding: 1px 8px; font-size: 0.75rem;
+  }
+  .reason-pill:not(.selected) .nb-badge { background: #e8f4fb; color: var(--cn-blue); }
 </style>
 
 <script>
   const AWARD_REASONS = [
-    'Session Award',
-    'Level Up / Project',
-    'Belt Test Completion',
-    'Boss Badge',
-    'Birthday',
-    'Game Jam',
-    'Ninja of the Month',
-    'Special Event',
-    'Manual Adjustment'
-  ];
-  const REMOVE_REASONS = [
-    'Shop Purchase',
-    'Merch Redemption',
-    'Event Ticket',
-    'Manual Deduction',
-    'Correction / Reversal'
+    { label: 'Completed Build/Quest',      amount: 1  },
+    { label: 'Published Community Game',   amount: 1  },
+    { label: 'Daily Activity Challenge',   amount: 1  },
+    { label: 'Creative',                   amount: 1  },
+    { label: 'Impact Level Up',            amount: 2  },
+    { label: 'Got a Stripe',               amount: 2  },
+    { label: 'Belt Up',                    amount: 5  },
+    { label: 'Boss Badge',                 amount: 5  },
+    { label: 'Birthday',                   amount: 5  },
+    { label: 'Ninja of the Month',         amount: 5  },
+    { label: 'Rules of the Dojo',          amount: 5  },
+    { label: 'Participated in Game Jam',   amount: 10 },
+    { label: 'Other',                      amount: null }
   ];
 
   let currentMode = 'award';
+  let selectedReason = null;
+
+  function buildPills() {
+    const container = document.getElementById('reasonPills');
+    container.innerHTML = '';
+    AWARD_REASONS.forEach(r => {
+      const pill = document.createElement('div');
+      pill.className = 'reason-pill';
+      pill.innerHTML = r.label + (r.amount !== null
+        ? `<span class="nb-badge">+${r.amount}</span>`
+        : `<span class="nb-badge">✏️</span>`);
+      pill.addEventListener('click', () => selectReason(pill, r));
+      container.appendChild(pill);
+    });
+  }
+
+  function selectReason(pill, reason) {
+    document.querySelectorAll('.reason-pill').forEach(p => p.classList.remove('selected'));
+    pill.classList.add('selected');
+    selectedReason = reason;
+
+    const otherWrap = document.getElementById('otherReasonWrap');
+    if (reason.label === 'Other') {
+      otherWrap.style.display = 'block';
+      document.getElementById('otherReasonText').focus();
+    } else {
+      otherWrap.style.display = 'none';
+      if (reason.amount !== null) document.getElementById('amount').value = reason.amount;
+    }
+  }
 
   function setMode(mode) {
     currentMode = mode;
     const isRemove = mode === 'remove';
     const card = document.getElementById('formCard');
     const btn = document.getElementById('actionBtn');
-    const title = document.getElementById('pageTitle');
-    const sub = document.getElementById('pageSubtitle');
     const prefix = document.getElementById('amountPrefix');
     const awardTab = document.getElementById('awardTab');
     const removeTab = document.getElementById('removeTab');
+
+    document.getElementById('awardReasonSection').style.display = isRemove ? 'none' : 'block';
+    document.getElementById('removeReasonSection').style.display = isRemove ? 'block' : 'none';
+    document.getElementById('legendCard').style.display = isRemove ? 'none' : 'block';
 
     if (isRemove) {
       card.classList.add('remove-mode');
       btn.className = 'btn btn-danger btn-lg rounded-pill py-3 fw-bold shadow';
       btn.innerHTML = '<i class="bi bi-dash-circle-fill me-2"></i> Confirm Removal';
-      title.textContent = 'Remove Ninja Bucks';
-      sub.textContent = 'Deduct bucks for shop purchases or corrections.';
+      document.getElementById('pageTitle').textContent = 'Remove Ninja Bucks';
+      document.getElementById('pageSubtitle').textContent = 'Deduct bucks for shop purchases or corrections.';
       prefix.style.cssText = 'background:#fff5f5; border-color:#fed7d7; color:#c53030;';
       awardTab.className = 'btn btn-light rounded-pill px-4 py-2 fw-bold text-secondary';
       removeTab.className = 'btn btn-danger rounded-pill px-4 py-2 fw-bold';
@@ -126,20 +195,13 @@
       card.classList.remove('remove-mode');
       btn.className = 'btn btn-primary btn-lg rounded-pill py-3 fw-bold shadow';
       btn.innerHTML = '<i class="bi bi-award-fill me-2"></i> Confirm Award';
-      title.textContent = 'Award Ninja Bucks';
-      sub.textContent = 'Instantly reward achievements, projects, or birthdays.';
+      document.getElementById('pageTitle').textContent = 'Award Ninja Bucks';
+      document.getElementById('pageSubtitle').textContent = 'Select a reason — the amount auto-fills to the standard value.';
       prefix.style.cssText = 'background:#fffbeb; border-color:#fde68a; color:#92400e;';
       awardTab.className = 'btn btn-primary rounded-pill px-4 py-2 fw-bold';
       removeTab.className = 'btn btn-light rounded-pill px-4 py-2 fw-bold text-secondary';
     }
-
-    // Swap reason options
-    const select = document.getElementById('reason');
-    const reasons = isRemove ? REMOVE_REASONS : AWARD_REASONS;
-    select.innerHTML = reasons.map(r => `<option value="${r}">${r}</option>`).join('');
   }
-
-  function setAmount(val) { document.getElementById('amount').value = val; }
 
   function showToast(msg, type = 'success') {
     const el = document.getElementById('awardToast');
@@ -151,49 +213,56 @@
   async function submitAction() {
     const ninjaName = document.getElementById('ninjaSearch').value.trim();
     const amount = parseInt(document.getElementById('amount').value);
-    const reason = document.getElementById('reason').value;
     const btn = document.getElementById('actionBtn');
-
-    if (!ninjaName || !amount || amount <= 0) {
-      showToast('Please enter a valid ninja and amount.', 'warning');
-      return;
-    }
-
-    const finalAmount = currentMode === 'remove' ? -amount : amount;
     const isRemove = currentMode === 'remove';
 
+    let reason;
+    if (isRemove) {
+      reason = document.getElementById('removeReason').value;
+    } else {
+      if (!selectedReason) { showToast('Please select a reason first.', 'warning'); return; }
+      reason = selectedReason.label === 'Other'
+        ? (document.getElementById('otherReasonText').value.trim() || 'Other')
+        : selectedReason.label;
+    }
+
+    if (!ninjaName || !amount || amount <= 0) {
+      showToast('Please enter a valid ninja and amount.', 'warning'); return;
+    }
+
+    const finalAmount = isRemove ? -amount : amount;
     btn.disabled = true;
     btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${isRemove ? 'Removing...' : 'Awarding...'}`;
 
     try {
-      const response = await fetch('/admin/update-ninja-bucks', {
+      const res = await fetch('/admin/update-ninja-bucks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ninjaName, amount: finalAmount, reason })
       });
-      const res = await response.json();
-      if (res.success) {
-        const msg = isRemove
-          ? `Removed ${amount} NB from ${ninjaName}.`
-          : `${amount} NB awarded to ${ninjaName}!`;
-        showToast(msg, isRemove ? 'warning' : 'success');
+      const data = await res.json();
+      if (data.success) {
+        showToast(isRemove ? `Removed ${amount} NB from ${ninjaName}.` : `${amount} NB awarded to ${ninjaName}!`, isRemove ? 'warning' : 'success');
         document.getElementById('ninjaSearch').value = '';
         document.getElementById('amount').value = '';
+        document.querySelectorAll('.reason-pill').forEach(p => p.classList.remove('selected'));
+        document.getElementById('otherReasonWrap').style.display = 'none';
+        document.getElementById('otherReasonText').value = '';
+        selectedReason = null;
       } else {
         showToast('Error: ' + (res.error || 'Ninja not found in leaderboard.'), 'danger');
       }
     } catch(e) { showToast('Network error.', 'danger'); }
     finally {
       btn.disabled = false;
-      if (isRemove) {
-        btn.innerHTML = '<i class="bi bi-dash-circle-fill me-2"></i> Confirm Removal';
-      } else {
-        btn.innerHTML = '<i class="bi bi-award-fill me-2"></i> Confirm Award';
-      }
+      btn.innerHTML = isRemove
+        ? '<i class="bi bi-dash-circle-fill me-2"></i> Confirm Removal'
+        : '<i class="bi bi-award-fill me-2"></i> Confirm Award';
     }
   }
 
-  // Init with award mode reasons
+  // Init
+  buildPills();
   setMode('award');
 </script>
 

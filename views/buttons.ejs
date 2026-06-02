@@ -38,10 +38,15 @@
               </button>
               <ul class="dropdown-menu shadow border-0">
                 <li><h6 class="dropdown-header text-success"><i class="bi bi-plus-circle-fill me-1"></i> Award</h6></li>
-                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 1, 'Completed Build/Quest')"><i class="bi bi-plus-circle me-2 text-primary"></i> +1 NB (Activity)</a></li>
-                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 2, 'Impact Level Up')"><i class="bi bi-plus-circle me-2 text-primary"></i> +2 NB (Level Up)</a></li>
-                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 5, 'Belt Up')"><i class="bi bi-plus-circle-fill me-2 text-success"></i> +5 NB (Belt Up)</a></li>
-                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 10, 'Participated in Game Jam')"><i class="bi bi-award me-2 text-warning"></i> +10 NB (Game Jam)</a></li>
+                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 1, 'Completed Build/Quest')"><i class="bi bi-plus-circle me-2 text-primary"></i> +1 &mdash; Completed Build/Quest</a></li>
+                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 1, 'Daily Activity Challenge')"><i class="bi bi-plus-circle me-2 text-primary"></i> +1 &mdash; Daily Activity Challenge</a></li>
+                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 1, 'Creative')"><i class="bi bi-plus-circle me-2 text-primary"></i> +1 &mdash; Creative</a></li>
+                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 2, 'Impact Level Up')"><i class="bi bi-plus-circle me-2 text-primary"></i> +2 &mdash; Impact Level Up</a></li>
+                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 2, 'Got a Stripe')"><i class="bi bi-plus-circle me-2 text-primary"></i> +2 &mdash; Got a Stripe</a></li>
+                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 5, 'Belt Up')"><i class="bi bi-plus-circle-fill me-2 text-success"></i> +5 &mdash; Belt Up</a></li>
+                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 5, 'Boss Badge')"><i class="bi bi-plus-circle-fill me-2 text-success"></i> +5 &mdash; Boss Badge</a></li>
+                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 5, 'Birthday')"><i class="bi bi-plus-circle-fill me-2 text-success"></i> +5 &mdash; Birthday</a></li>
+                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 10, 'Participated in Game Jam')"><i class="bi bi-award me-2 text-warning"></i> +10 &mdash; Game Jam</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><h6 class="dropdown-header text-danger"><i class="bi bi-dash-circle-fill me-1"></i> Remove</h6></li>
                 <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', -5, 'Shop Purchase')"><i class="bi bi-cart-fill me-2 text-danger"></i> -5 NB (Shop)</a></li>
