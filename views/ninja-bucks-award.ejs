@@ -28,17 +28,23 @@
   <div class="col-lg-9">
     <div id="formCard" class="admin-card p-4 p-md-5 shadow-sm">
 
-      <!-- Ninja selector -->
+      <!-- Ninja selector with custom autocomplete -->
       <div class="mb-4">
         <label class="form-label fw-bold text-dark">1. Select Ninja</label>
-        <div class="input-group">
-          <span class="input-group-text bg-white border-end-0"><i class="bi bi-person-search"></i></span>
-          <input type="text" id="ninjaSearch" class="form-control border-start-0" placeholder="Search by name..." list="ninjaOptions">
-          <datalist id="ninjaOptions">
-            <% leaderboard.forEach(n => { %>
-              <option value="<%= n.name %>">
-            <% }); %>
-          </datalist>
+        <div class="position-relative">
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0"><i class="bi bi-person-search"></i></span>
+            <input type="text" id="ninjaSearch" class="form-control border-start-0" placeholder="Start typing a name..." autocomplete="off">
+            <span class="input-group-text bg-white border-start-0 text-muted" id="clearSearch" style="cursor:pointer; display:none;" onclick="clearNinjaSearch()">
+              <i class="bi bi-x-lg"></i>
+            </span>
+          </div>
+          <div id="ninjaDropdown" style="
+            display:none; position:absolute; top:100%; left:0; right:0; z-index:1050;
+            background:white; border:1px solid #dee2e6; border-top:none;
+            border-radius:0 0 12px 12px; box-shadow:0 8px 24px rgba(0,0,0,0.1);
+            max-height:260px; overflow-y:auto;
+          "></div>
         </div>
       </div>
 
@@ -144,6 +150,16 @@
   .pill-10.selected { background: #ef4444; border-color: #dc2626; color: white; }
   .pill-10.selected .nb-badge { background: rgba(255,255,255,0.25); color: white; }
 
+  /* Autocomplete dropdown items */
+  .ninja-option {
+    padding: 10px 16px; cursor: pointer; font-weight: 600; font-size: 0.9rem;
+    border-bottom: 1px solid #f3f4f6; transition: background 0.1s;
+  }
+  .ninja-option:last-child { border-bottom: none; }
+  .ninja-option:hover, .ninja-option.active { background: #eff6ff; color: var(--cn-blue); }
+  .ninja-option .match-highlight { color: var(--cn-blue); text-decoration: underline; }
+  #ninjaSearch:focus { border-color: var(--cn-blue); box-shadow: 0 0 0 0.2rem rgba(53,142,188,.15); }
+
   /* Other — gray */
   .pill-other { border-color: #d1d5db; color: #4b5563; background: #f9fafb; }
   .pill-other .nb-badge { background: #e5e7eb; color: #4b5563; }
@@ -153,6 +169,93 @@
 </style>
 
 <script>
+  // ── Ninja autocomplete ────────────────────────────────────────────────────
+  const ALL_NINJAS = <%- JSON.stringify(leaderboard.map(n => n.name)) %>;
+  let activeIdx = -1;
+
+  const searchInput  = document.getElementById('ninjaSearch');
+  const dropdown     = document.getElementById('ninjaDropdown');
+  const clearBtn     = document.getElementById('clearSearch');
+
+  function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function highlight(name, query) {
+    if (!query) return escapeHtml(name);
+    const idx = name.toLowerCase().indexOf(query.toLowerCase());
+    if (idx === -1) return escapeHtml(name);
+    return escapeHtml(name.slice(0, idx))
+      + `<span class="match-highlight">${escapeHtml(name.slice(idx, idx + query.length))}</span>`
+      + escapeHtml(name.slice(idx + query.length));
+  }
+
+  function showDropdown(matches, query) {
+    activeIdx = -1;
+    dropdown.innerHTML = '';
+    if (!matches.length) {
+      dropdown.innerHTML = '<div class="ninja-option text-muted fst-italic">No ninjas found</div>';
+    } else {
+      matches.forEach((name, i) => {
+        const item = document.createElement('div');
+        item.className = 'ninja-option';
+        item.innerHTML = highlight(name, query);
+        item.addEventListener('mousedown', e => { e.preventDefault(); selectNinja(name); });
+        dropdown.appendChild(item);
+      });
+    }
+    dropdown.style.display = 'block';
+  }
+
+  function selectNinja(name) {
+    searchInput.value = name;
+    dropdown.style.display = 'none';
+    clearBtn.style.display = 'flex';
+    activeIdx = -1;
+  }
+
+  function clearNinjaSearch() {
+    searchInput.value = '';
+    dropdown.style.display = 'none';
+    clearBtn.style.display = 'none';
+    searchInput.focus();
+  }
+
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim();
+    clearBtn.style.display = q ? 'flex' : 'none';
+    if (!q) { dropdown.style.display = 'none'; return; }
+    const matches = ALL_NINJAS.filter(n => n.toLowerCase().includes(q.toLowerCase())).slice(0, 10);
+    showDropdown(matches, q);
+  });
+
+  // Keyboard navigation
+  searchInput.addEventListener('keydown', e => {
+    const items = dropdown.querySelectorAll('.ninja-option');
+    if (!items.length || dropdown.style.display === 'none') return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIdx = Math.min(activeIdx + 1, items.length - 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIdx = Math.max(activeIdx - 1, 0);
+    } else if (e.key === 'Enter' && activeIdx >= 0) {
+      e.preventDefault();
+      selectNinja(items[activeIdx].textContent);
+      return;
+    } else if (e.key === 'Escape') {
+      dropdown.style.display = 'none'; return;
+    }
+    items.forEach((item, i) => item.classList.toggle('active', i === activeIdx));
+    if (activeIdx >= 0) items[activeIdx].scrollIntoView({ block: 'nearest' });
+  });
+
+  // Close when clicking outside
+  document.addEventListener('mousedown', e => {
+    if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+  // ─────────────────────────────────────────────────────────────────────────
+
   const AWARD_REASONS = [
     { label: 'Completed Build/Quest',      amount: 1  },
     { label: 'Published Community Game',   amount: 1  },
