@@ -292,6 +292,23 @@ const pushDamageToSheets = async (ninjaName, amount, reason, damageDealt) => {
   } catch(e) { console.error('[Sheets] pushDamageToSheets error:', e.message); }
 };
 
+// Keep Boss Battle!F1 in sync so Canva/external tools can read live boss HP
+const pushBossHPToSheets = async (newHP) => {
+  try {
+    const d = await getDashboardData();
+    if (!d?.mainSpreadsheetId) return;
+    const sheets = await getSheetClient();
+    if (!sheets) return;
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: d.mainSpreadsheetId,
+      range: 'Boss Battle!F1',
+      valueInputOption: 'RAW',
+      requestBody: { values: [[newHP]] }
+    });
+    console.log(`[Sheets] Boss HP → ${newHP}`);
+  } catch(e) { console.error('[Sheets] pushBossHPToSheets error:', e.message); }
+};
+
 const deleteFromNBLogSheet = async (ninjaName, amount, reason, newNinjaTotal) => {
   try {
     const d = await getDashboardData();
@@ -555,13 +572,15 @@ app.post('/admin/ninjas/:id/toggle-active', isAuthenticated, async (req, res) =>
 app.get('/admin/boss-battle', isAuthenticated, async (req, res) => res.render('boss-battle', { data: await getDashboardData() }));
 app.post('/admin/boss-battle/update', isAuthenticated, async (req, res) => {
   const d = await getDashboardData();
-  d.bossHP = req.body.bossHP; 
-  d.bossMaxHP = req.body.bossMaxHP; 
-  d.bossName = req.body.bossName; 
+  d.bossHP = parseInt(req.body.bossHP);
+  d.bossMaxHP = parseInt(req.body.bossMaxHP);
+  d.bossName = req.body.bossName;
   d.bossImage = req.body.bossImage || '/img/cn_logo.png';
   d.bossActive = req.body.bossActive === 'on';
   d.backgroundImage = req.body.backgroundImage || d.backgroundImage;
-  await d.save(); res.redirect('/admin/boss-battle');
+  await d.save();
+  pushBossHPToSheets(d.bossHP).catch(() => {});
+  res.redirect('/admin/boss-battle');
 });
 
 app.get('/admin/backups', isAuthenticated, async (req, res) => {
@@ -985,7 +1004,8 @@ app.post('/admin/nb-log/update-damage/:id', isAuthenticated, async (req, res) =>
     await Promise.all([
       d.save(),
       log.save(),
-      pushDamageToSheets(log.ninjaName, log.amount, log.buttonAction, newDmg)
+      pushDamageToSheets(log.ninjaName, log.amount, log.buttonAction, newDmg),
+      pushBossHPToSheets(d.bossHP)
     ]);
     res.json({ success: true, newHP: d.bossHP });
   } catch (error) { res.status(500).json({ error: error.message }); }
