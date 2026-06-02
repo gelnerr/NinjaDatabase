@@ -1,0 +1,75 @@
+<%- include('partials/admin-header', { title: 'Inactive Ninjas', active: 'data' }) %>
+
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h2 class="page-title text-muted">Inactive Ninjas</h2>
+    <p class="text-muted mb-0">Historical records of former members.</p>
+  </div>
+</div>
+
+<div class="admin-card overflow-hidden shadow-sm">
+  <div class="p-4 border-bottom bg-light">
+    <div class="input-group" style="max-width: 350px;">
+      <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="ninjaSearch" class="form-control border-start-0 ps-0" placeholder="Search inactive ninjas..." onkeyup="filterTable()">
+    </div>
+  </div>
+  
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" id="ninjaTable">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-4 py-3">Ninja Name</th>
+          <th class="py-3">Last Rank</th>
+          <th class="text-end pe-4 py-3">System Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (ninjas.length > 0) { %>
+          <% ninjas.forEach(ninja => { %>
+            <tr>
+              <td class="ps-4 fw-bold text-muted"><%= ninja.name %></td>
+              <td>
+                <span class="badge bg-light text-dark border px-3"><%= ninja.currentBelt %></span>
+              </td>
+              <td class="text-end pe-4">
+                <button class="btn btn-sm btn-outline-success rounded-pill px-3" onclick="reactivateNinja('<%= ninja._id %>')">
+                  <i class="bi bi-person-check-fill me-1"></i> Reactivate
+                </button>
+              </td>
+            </tr>
+          <% }); %>
+        <% } else { %>
+          <tr>
+            <td colspan="3" class="text-center py-5 text-muted">
+              <i class="bi bi-person-check fs-2 d-block mb-2"></i> No inactive ninjas found.
+            </td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  function filterTable() {
+    const q = document.getElementById('ninjaSearch').value.toUpperCase();
+    const trs = document.querySelectorAll('#ninjaTable tbody tr');
+    trs.forEach(tr => {
+      const td = tr.querySelector('td');
+      if (td) {
+        tr.style.display = td.textContent.toUpperCase().includes(q) ? "" : "none";
+      }
+    });
+  }
+
+  async function reactivateNinja(id) {
+    if(!confirm('Move this ninja back to active roster?')) return;
+    try {
+      const res = await fetch(`/admin/ninjas/${id}/toggle-active`, { method: 'POST' });
+      if (res.ok) location.reload();
+    } catch (e) { alert('Network error.'); }
+  }
+</script>
+
+<%- include('partials/admin-footer') %>

@@ -1,0 +1,166 @@
+<%- include('partials/admin-header', { title: 'Update Progress', active: 'progress' }) %>
+
+<!-- Toast -->
+<div id="toastContainer" class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
+  <div id="progressToast" class="toast align-items-center text-white border-0 shadow" role="alert">
+    <div class="d-flex">
+      <div class="toast-body fw-bold" id="toastMsg">Done!</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h2 class="page-title">Update Ninja Progress</h2>
+    <p class="text-muted mb-0">Record belt tests and rank advancements.</p>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-5">
+    <div class="admin-card p-4 shadow-sm mb-4">
+      <label class="form-label fw-bold text-dark mb-3">1. Select Ninja</label>
+      <div class="input-group mb-3">
+        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+        <input type="text" id="ninjaSearch" class="form-control border-start-0" placeholder="Type name to filter..." onkeyup="filterNinjas()">
+      </div>
+      
+      <div id="ninjaList" class="list-group list-group-flush border rounded overflow-auto" style="max-height: 400px;">
+        <% ninjas.forEach(ninja => { %>
+          <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center ninja-item" 
+                  onclick="selectNinja('<%= JSON.stringify(ninja).replace(/'/g, "\\'") %>')">
+            <span class="fw-bold"><%= ninja.name %></span>
+            <span class="badge bg-light text-dark border"><%= ninja.currentBelt %></span>
+          </button>
+        <% }); %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div id="updateForm" class="admin-card p-4 shadow-sm" style="display: none;">
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <div class="bg-primary bg-opacity-10 p-3 rounded-circle text-primary">
+          <i class="bi bi-person-workspace fs-3"></i>
+        </div>
+        <div>
+          <h4 id="displayNinjaName" class="fw-bold mb-0">--</h4>
+          <p class="text-muted mb-0">Current Rank: <span id="displayCurrentBelt" class="fw-bold">--</span></p>
+        </div>
+      </div>
+
+      <hr class="my-4">
+
+      <div class="mb-4">
+        <label class="form-label fw-bold text-dark">New Belt Rank</label>
+        <div class="row g-2">
+          <% ['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black', 'Bronze', 'Silver', 'Platinum', 'Gold', 'Going Gold'].forEach(belt => { %>
+            <div class="col-md-4">
+              <input type="radio" class="btn-check" name="newBelt" id="belt_<%= belt.toLowerCase().replace(' ', '_') %>" value="<%= belt %>">
+              <label class="btn btn-outline-secondary w-100 text-start py-2" for="belt_<%= belt.toLowerCase().replace(' ', '_') %>">
+                <i class="bi bi-award me-2 opacity-50"></i><%= belt %>
+              </label>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-bold text-dark">Notes (Optional)</label>
+        <textarea id="notes" class="form-control" rows="2" placeholder="e.g. Completed Food Frenzy Project"></textarea>
+      </div>
+
+      <div class="d-grid">
+        <button id="saveBtn" class="btn btn-primary btn-lg rounded-pill py-3 fw-bold" onclick="saveProgress()">
+          <i class="bi bi-check2-circle me-2"></i> Confirm Advancement
+        </button>
+      </div>
+    </div>
+
+    <div id="noSelection" class="admin-card p-5 text-center shadow-sm border-dashed">
+      <i class="bi bi-arrow-left-circle display-1 text-light mb-3 d-block"></i>
+      <h5 class="text-muted">Select a ninja from the left to record progress</h5>
+    </div>
+  </div>
+</div>
+
+<style>
+  .border-dashed { border-style: dashed !important; border-width: 2px !important; }
+  .ninja-item.active { background-color: var(--cn-blue) !important; color: white !important; border-color: var(--cn-blue) !important; }
+  .ninja-item.active .badge { background: rgba(255,255,255,0.2) !important; color: white !important; border-color: rgba(255,255,255,0.3) !important; }
+  .btn-check:checked + label { background-color: var(--cn-blue) !important; border-color: var(--cn-blue) !important; color: white !important; box-shadow: 0 4px 10px rgba(53,142,188,0.3); }
+</style>
+
+<script>
+  let selectedNinja = null;
+
+  function filterNinjas() {
+    const q = document.getElementById('ninjaSearch').value.toLowerCase();
+    document.querySelectorAll('.ninja-item').forEach(item => {
+      const name = item.querySelector('.fw-bold').textContent.toLowerCase();
+      item.style.display = name.includes(q) ? 'flex' : 'none';
+    });
+  }
+
+  function selectNinja(ninjaJson) {
+    selectedNinja = JSON.parse(ninjaJson);
+    document.querySelectorAll('.ninja-item').forEach(i => i.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    
+    document.getElementById('noSelection').style.display = 'none';
+    document.getElementById('updateForm').style.display = 'block';
+    document.getElementById('displayNinjaName').textContent = selectedNinja.name;
+    document.getElementById('displayCurrentBelt').textContent = selectedNinja.currentBelt;
+    
+    // Auto-select current belt
+    const beltId = `belt_${selectedNinja.currentBelt.toLowerCase().replace(/ /g, '_')}`;
+    const radio = document.getElementById(beltId);
+    if (radio) radio.checked = true;
+  }
+
+  function showToast(msg, type = 'success') {
+    const el = document.getElementById('progressToast');
+    document.getElementById('toastMsg').textContent = msg;
+    el.className = `toast align-items-center text-white bg-${type} border-0 shadow`;
+    bootstrap.Toast.getOrCreateInstance(el, { delay: 2500 }).show();
+  }
+
+  async function saveProgress() {
+    if (!selectedNinja) return;
+    const newBelt = document.querySelector('input[name="newBelt"]:checked')?.value;
+    const notes = document.getElementById('notes').value;
+    const btn = document.getElementById('saveBtn');
+
+    if (!newBelt) { showToast('Please select a new belt.', 'warning'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+
+    try {
+      const response = await fetch(`/admin/ninjas/${selectedNinja._id}/update-belt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentBelt: newBelt, notes })
+      });
+
+      if (response.ok) {
+        showToast(`${selectedNinja.name} advanced to ${newBelt}!`);
+        // Update the displayed belt in the list
+        const activeBtn = document.querySelector('.ninja-item.active .badge');
+        if (activeBtn) activeBtn.textContent = newBelt;
+        document.getElementById('displayCurrentBelt').textContent = newBelt;
+        selectedNinja.currentBelt = newBelt;
+        // Re-select the new belt radio
+        const beltId = `belt_${newBelt.toLowerCase().replace(/ /g, '_')}`;
+        const radio = document.getElementById(beltId);
+        if (radio) radio.checked = true;
+      } else {
+        showToast('Error saving progress.', 'danger');
+      }
+    } catch (e) { showToast('Network error.', 'danger'); }
+    finally { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check2-circle me-2"></i> Confirm Advancement'; }
+  }
+</script>
+
+<%- include('partials/admin-footer') %>

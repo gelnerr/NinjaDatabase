@@ -1,0 +1,179 @@
+<%- include('partials/admin-header', { title: 'NB Log', active: 'logs' }) %>
+
+<!-- Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
+  <div id="dmgToast" class="toast align-items-center text-white border-0 shadow" role="alert">
+    <div class="d-flex">
+      <div class="toast-body fw-bold" id="dmgToastMsg">Saved!</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<div class="page-header d-flex justify-content-between align-items-end">
+  <div>
+    <h2 class="page-title">Ninja Bucks Transactions</h2>
+    <p class="text-muted mb-0">Audit history of all awards and expenditures.</p>
+  </div>
+  <div class="btn-group rounded-pill overflow-hidden shadow-sm">
+    <a href="/admin/nb-log" class="btn btn-<%= !archived ? 'primary' : 'white' %> px-4">Active Session</a>
+    <a href="/admin/nb-log?archived=true" class="btn btn-<%= archived ? 'primary' : 'white' %> px-4">Legacy Archive</a>
+  </div>
+</div>
+
+<div class="admin-card overflow-hidden mb-4">
+  <div class="p-4 border-bottom bg-light d-flex justify-content-between align-items-center">
+    <div class="fw-bold text-dark">
+      <i class="bi bi-list-stars me-2"></i> Recent Records
+      <% if (!archived) { %>
+        <span class="ms-2 badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 small">Boss damage can be logged below</span>
+      <% } %>
+    </div>
+    <% if(!archived) { %>
+      <button class="btn btn-sm btn-outline-primary" onclick="archiveLogs()">
+        <i class="bi bi-archive me-1"></i> Archive Current Logs
+      </button>
+    <% } %>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-4">Date & Time</th>
+          <th>Ninja Name</th>
+          <th>Action / Reason</th>
+          <th>Amount</th>
+          <th>
+            <span class="d-flex align-items-center gap-1">
+              <i class="bi bi-lightning-charge-fill text-danger"></i> Boss Damage
+            </span>
+          </th>
+          <th class="text-end pe-4">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (logs.length > 0) { %>
+          <% logs.forEach(log => { %>
+            <tr id="row-<%= log._id %>">
+              <td class="ps-4 text-muted small">
+                <%= new Date(log.date).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %>
+              </td>
+              <td class="fw-bold text-dark"><%= log.ninjaName %></td>
+              <td>
+                <span class="badge bg-light text-dark border px-3"><%= log.buttonAction %></span>
+              </td>
+              <td class="fw-bold <%= log.amount >= 0 ? 'text-success' : 'text-danger' %>">
+                <%= log.amount >= 0 ? '+' : '' %><%= log.amount %> NB
+              </td>
+              <td>
+                <% if (log.damageDealt > 0) { %>
+                  <span class="damage-display" data-id="<%= log._id %>" onclick="editDamage('<%= log._id %>', <%= log.damageDealt %>)" title="Click to edit" style="cursor: pointer;">
+                    <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 px-3 py-2 fw-bold">
+                      <i class="bi bi-sword me-1"></i><%= log.damageDealt %> dmg
+                    </span>
+                  </span>
+                <% } else { %>
+                  <div class="damage-input-group d-flex gap-1 align-items-center" id="input-<%= log._id %>">
+                    <input type="number" class="form-control form-control-sm" style="width: 75px;" min="0" placeholder="0" id="dmg-<%= log._id %>"
+                      onkeydown="if(event.key==='Enter') saveDamage('<%= log._id %>')">
+                    <button class="btn btn-sm btn-danger px-2" onclick="saveDamage('<%= log._id %>')" title="Log damage">
+                      <i class="bi bi-lightning-charge-fill"></i>
+                    </button>
+                  </div>
+                <% } %>
+              </td>
+              <td class="text-end pe-4">
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteLog('<%= log._id %>')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+          <% }); %>
+        <% } else { %>
+          <tr>
+            <td colspan="6" class="text-center py-5 text-muted">
+              <i class="bi bi-inbox fs-2 d-block mb-2"></i> No transaction records found.
+            </td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .btn-white { background: white; color: #445566; border: 1px solid var(--cn-border); }
+  .btn-white:hover { background: #f8f9fa; }
+</style>
+
+<script>
+  function showToast(msg, type = 'success') {
+    const el = document.getElementById('dmgToast');
+    document.getElementById('dmgToastMsg').textContent = msg;
+    el.className = `toast align-items-center text-white bg-${type} border-0 shadow`;
+    bootstrap.Toast.getOrCreateInstance(el, { delay: 2000 }).show();
+  }
+
+  async function saveDamage(id) {
+    const input = document.getElementById('dmg-' + id);
+    const dmg = parseInt(input?.value) || 0;
+    if (dmg <= 0) { showToast('Enter a damage value greater than 0.', 'warning'); return; }
+
+    try {
+      const res = await fetch(`/admin/nb-log/update-damage/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ damageDealt: dmg })
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Replace input group with the static badge
+        const cell = document.getElementById('input-' + id)?.closest('td');
+        if (cell) {
+          cell.innerHTML = `
+            <span class="damage-display" data-id="${id}" onclick="editDamage('${id}', ${dmg})" title="Click to edit" style="cursor:pointer;">
+              <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 px-3 py-2 fw-bold">
+                <i class="bi bi-sword me-1"></i>${dmg} dmg
+              </span>
+            </span>`;
+        }
+        showToast(`${dmg} damage logged! Boss HP: ${data.newHP}`);
+      } else {
+        showToast('Error: ' + (data.error || 'Failed'), 'danger');
+      }
+    } catch(e) { showToast('Network error', 'danger'); }
+  }
+
+  function editDamage(id, currentDmg) {
+    const span = document.querySelector(`.damage-display[data-id="${id}"]`);
+    if (!span) return;
+    const cell = span.closest('td');
+    cell.innerHTML = `
+      <div class="damage-input-group d-flex gap-1 align-items-center" id="input-${id}">
+        <input type="number" class="form-control form-control-sm" style="width:75px;" min="0" value="${currentDmg}" id="dmg-${id}"
+          onkeydown="if(event.key==='Enter') saveDamage('${id}')">
+        <button class="btn btn-sm btn-danger px-2" onclick="saveDamage('${id}')" title="Save">
+          <i class="bi bi-lightning-charge-fill"></i>
+        </button>
+      </div>`;
+    document.getElementById('dmg-' + id)?.focus();
+  }
+
+  async function archiveLogs() {
+    if(!confirm('Move all current logs to archive? This clears today\'s active list.')) return;
+    const res = await fetch('/admin/archive-logs', { method: 'POST' });
+    if(res.ok) location.reload();
+  }
+
+  async function deleteLog(id) {
+    if(!confirm('Permanently delete this entry? This will NOT refund the NinjaBucks automatically.')) return;
+    try {
+      const res = await fetch(`/admin/nb-log/delete/${id}`, { method: 'POST' });
+      if(res.ok) location.reload();
+      else showToast('Failed to delete.', 'danger');
+    } catch(e) { showToast('Network error.', 'danger'); }
+  }
+</script>
+
+<%- include('partials/admin-footer') %>

@@ -1,0 +1,118 @@
+<%- include('partials/admin-header', { title: 'Quick Controls', active: 'dashboard' }) %>
+
+<!-- Toast Notification -->
+<div id="awardToast" class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
+  <div id="toastEl" class="toast align-items-center text-white bg-success border-0 shadow" role="alert">
+    <div class="d-flex">
+      <div class="toast-body fw-bold" id="toastMsg">Awarded!</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<div class="page-header d-flex justify-content-between align-items-end">
+  <div>
+    <h2 class="page-title">Quick Actions & Macros</h2>
+    <p class="text-muted mb-0">One-click controls for common Dojo tasks.</p>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-12">
+    <div class="admin-card p-4 shadow-sm mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="fw-bold mb-0"><i class="bi bi-lightning-charge-fill text-warning me-2"></i> Fast Rewards</h5>
+        <div class="input-group" style="max-width: 250px;">
+           <span class="input-group-text bg-white border-end-0"><i class="bi bi-funnel small"></i></span>
+           <input type="text" id="ninjaFilter" class="form-control form-control-sm border-start-0" placeholder="Filter ninjas..." onkeyup="filterBtns()">
+        </div>
+      </div>
+
+      <div id="btnGrid" class="row g-2">
+        <% ninjas.forEach(ninja => { %>
+          <div class="col-sm-6 col-md-4 col-lg-3 ninja-btn-col">
+            <div class="dropdown">
+              <button class="btn btn-white border w-100 text-start py-2 d-flex justify-content-between align-items-center dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <span class="fw-bold text-truncate"><%= ninja.name %></span>
+                <span class="badge bg-light text-dark border-0 opacity-50 small"><%= ninja.totalNinjaBucks %></span>
+              </button>
+              <ul class="dropdown-menu shadow border-0">
+                <li><h6 class="dropdown-header text-success"><i class="bi bi-plus-circle-fill me-1"></i> Award</h6></li>
+                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 1, 'Completed Build/Quest')"><i class="bi bi-plus-circle me-2 text-primary"></i> +1 NB (Activity)</a></li>
+                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 2, 'Impact Level Up')"><i class="bi bi-plus-circle me-2 text-primary"></i> +2 NB (Level Up)</a></li>
+                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 5, 'Belt Up')"><i class="bi bi-plus-circle-fill me-2 text-success"></i> +5 NB (Belt Up)</a></li>
+                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', 10, 'Participated in Game Jam')"><i class="bi bi-award me-2 text-warning"></i> +10 NB (Game Jam)</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header text-danger"><i class="bi bi-dash-circle-fill me-1"></i> Remove</h6></li>
+                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', -5, 'Shop Purchase')"><i class="bi bi-cart-fill me-2 text-danger"></i> -5 NB (Shop)</a></li>
+                <li><a class="dropdown-item py-2" href="#" onclick="quickAward('<%= ninja.name %>', -10, 'Shop Purchase')"><i class="bi bi-cart-fill me-2 text-danger"></i> -10 NB (Shop)</a></li>
+                <li><a class="dropdown-item py-2" href="#" onclick="quickRemoveCustom('<%= ninja.name %>')"><i class="bi bi-dash-circle me-2 text-danger"></i> Custom Remove...</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item py-2 text-muted" href="/admin/update-progress"><i class="bi bi-graph-up-arrow me-2"></i> Belt Update</a></li>
+              </ul>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .btn-white { background: white; color: #334455; transition: all 0.15s; }
+  .btn-white:hover { border-color: var(--cn-blue) !important; background: #f8fbff; }
+</style>
+
+<script>
+  function filterBtns() {
+    const q = document.getElementById('ninjaFilter').value.toUpperCase();
+    document.querySelectorAll('.ninja-btn-col').forEach(col => {
+      const name = col.querySelector('.fw-bold').textContent.toUpperCase();
+      col.style.display = name.includes(q) ? 'block' : 'none';
+    });
+  }
+
+  function quickRemoveCustom(ninjaName) {
+    const amtStr = prompt(`Remove how many NB from ${ninjaName}?`);
+    if (!amtStr) return;
+    const amt = parseInt(amtStr);
+    if (isNaN(amt) || amt <= 0) { showToast('Enter a valid positive number.', 'warning'); return; }
+    const reason = prompt('Reason (e.g. Shop Purchase)?') || 'Shop Purchase';
+    quickAward(ninjaName, -amt, reason);
+  }
+
+  function showToast(msg, type = 'success') {
+    const toastEl = document.getElementById('toastEl');
+    document.getElementById('toastMsg').textContent = msg;
+    toastEl.className = `toast align-items-center text-white bg-${type} border-0 shadow`;
+    bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 2500 }).show();
+  }
+
+  async function quickAward(ninjaName, amount, reason) {
+    try {
+      const res = await fetch('/admin/update-ninja-bucks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ninjaName, amount, reason })
+      });
+      const data = await res.json();
+      if(data.success) {
+        const sign = amount >= 0 ? '+' : '';
+        const type = amount >= 0 ? 'success' : 'warning';
+        showToast(`${sign}${amount} NB → ${ninjaName}`, type);
+        // Update the displayed buck count on the button
+        const btns = document.querySelectorAll('.ninja-btn-col');
+        btns.forEach(col => {
+          if(col.querySelector('.fw-bold')?.textContent.trim() === ninjaName) {
+            const badge = col.querySelector('.badge');
+            if(badge) badge.textContent = data.newTotal;
+          }
+        });
+      } else {
+        showToast('Error: ' + (data.error || 'Failed'), 'danger');
+      }
+    } catch (e) { showToast('Network error', 'danger'); }
+  }
+</script>
+
+<%- include('partials/admin-footer') %>

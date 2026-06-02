@@ -7,6 +7,27 @@
   <link rel="stylesheet" href="/css/bootstrap.min.css">
   <link rel="stylesheet" href="/icons/bootstrap-icons.css">
   <link rel="stylesheet" href="/css/responsive.css">
+  
+  <% if (theme === 'stellar') { %>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+      :root { --stellar-purple: #7B2CBF; --stellar-glow: #00E5FF; --stellar-bg: #10002B; }
+      body { background-color: var(--stellar-bg); background-image: radial-gradient(circle at 20% 30%, rgba(123, 44, 191, 0.2) 0%, transparent 40%); color: white; font-family: 'Quicksand', sans-serif; }
+      .belt-header { background: rgba(255, 255, 255, 0.05) !important; backdrop-filter: blur(15px); border: 1px solid var(--stellar-glow) !important; color: var(--stellar-glow) !important; text-shadow: 0 0 10px var(--stellar-glow) !important; font-family: 'Orbitron'; }
+      .ninja-card { background: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; backdrop-filter: blur(10px); color: white !important; border-radius: 15px !important; }
+      .ninja-item { color: white !important; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    </style>
+  <% } else if (theme === 'pixel') { %>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+      :root { --cn-blue: #00FF41; --cn-dark: #000; --cn-gray: #111; }
+      body { font-family: 'Press Start 2P', cursive; font-size: 0.8rem; color: white; }
+      .belt-header { border: 4px solid white !important; border-radius: 0 !important; }
+      .ninja-card { background: #222 !important; border: 4px solid white !important; color: white !important; border-radius: 0 !important; }
+      .ninja-item { color: #00FF41 !important; }
+    </style>
+  <% } %>
+
   <style>
     :root {
       --cn-blue: #358ebc;
@@ -14,12 +35,10 @@
       --cn-gray: #f5f6f8;
     }
     body { background-color: var(--cn-gray); font-family: 'Segoe UI', sans-serif; }
-    .sidebar {
-      width: 240px; background: var(--cn-dark); min-height: 100vh; color: white; position: fixed;
-    }
+    .sidebar { width: 240px; background: var(--cn-dark); min-height: 100vh; color: white; position: fixed; }
     .main { padding: 40px; }
     .with-sidebar { margin-left: 240px; }
-    .no-sidebar { max-width: 1400px; margin: 0 auto; }
+    .no-sidebar { max-width: 100%; margin: 0 auto; }
     
     .nav-link { color: #99aabb; padding: 12px 20px; border-radius: 8px; margin: 4px 10px; }
     .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.1); color: white; }
@@ -31,118 +50,165 @@
       display: flex;
       overflow-x: auto;
       gap: 20px;
-      padding-bottom: 20px;
+      padding: 20px 0;
       align-items: flex-start;
+      min-height: 80vh;
     }
     
     .belt-column {
-      min-width: 260px;
+      min-width: 280px;
       flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
     }
     
     .belt-header {
-      padding: 15px;
-      border-radius: 12px;
+      padding: 20px;
+      border-radius: 15px;
       color: white;
       text-align: center;
-      font-weight: 800;
+      font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      margin-bottom: 20px;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+      letter-spacing: 2px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      margin-bottom: 25px;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
       position: sticky;
       top: 0;
       z-index: 10;
     }
     
-    .degree-card {
+    .ninja-card {
       background: white;
-      border-radius: 12px;
-      padding: 15px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      margin-bottom: 15px;
-      border-top: 5px solid #ddd;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+      border-top: 6px solid #ddd;
     }
     
-    .degree-title {
-      font-size: 0.7rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      color: #99aabb;
-      margin-bottom: 12px;
-      display: block;
-      border-bottom: 1px solid #f0f0f0;
-      padding-bottom: 5px;
-    }
-    
-    .ninja-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    
+    .ninja-list { list-style: none; padding: 0; margin: 0; }
     .ninja-item {
-      padding: 6px 10px;
-      font-size: 0.9rem;
+      padding: 10px 12px;
+      font-size: 1rem;
       color: #334455;
-      font-weight: 600;
-      border-radius: 6px;
-      transition: background 0.2s;
-    }
-    .ninja-item:hover {
-      background: #f8fbff;
+      font-weight: 700;
+      transition: all 0.2s;
     }
     
     /* Belt Colors */
-    .white-belt { background-color: #f8f9fa; color: #333 !important; border: 1px solid #ddd; text-shadow: none !important; }
-    .yellow-belt { background-color: #fff200; color: #333 !important; text-shadow: none !important; }
-    .orange-belt { background-color: #f7941d; }
-    .green-belt { background-color: #00a651; }
-    .blue-belt { background-color: #00aeef; }
-    .purple-belt { background-color: #662d91; }
-    .brown-belt { background-color: #754c24; }
-    .red-belt { background-color: #ed1c24; }
-    .black-belt { background-color: #231f20; }
+    .belt-white { background: #f8f9fa; color: #333 !important; border: 1px solid #ddd; text-shadow: none !important; }
+    .belt-yellow { background: #fff200; color: #333 !important; text-shadow: none !important; }
+    .belt-orange { background: #f7941d; }
+    .belt-green { background: #00a651; }
+    .belt-blue { background: #00aeef; }
+    .belt-purple { background: #662d91; }
+    .belt-brown { background: #754c24; }
+    .belt-red { background: #ed1c24; }
+    .belt-black { background: #231f20; }
+    .belt-bronze { background: #cd7f32; }
+    .belt-silver { background: #c0c0c0; color: #333 !important; text-shadow: none !important; }
+    .belt-platinum { background: #e5e4e2; color: #333 !important; text-shadow: none !important; }
+    .belt-gold { background: linear-gradient(45deg, #ffd700, #ffaa00); }
+    .belt-going-gold { background: linear-gradient(45deg, #ffd700, #ffaa00); }
     
-    .white-belt-border { border-top-color: #eee; }
-    .yellow-belt-border { border-top-color: #fff200; }
-    .orange-belt-border { border-top-color: #f7941d; }
-    .green-belt-border { border-top-color: #00a651; }
-    .blue-belt-border { border-top-color: #00aeef; }
-    .purple-belt-border { border-top-color: #662d91; }
-    .brown-belt-border { border-top-color: #754c24; }
-    .red-belt-border { border-top-color: #ed1c24; }
-    .black-belt-border { border-top-color: #231f20; }
+    .border-white { border-top-color: #eee !important; }
+    .border-yellow { border-top-color: #fff200 !important; }
+    .border-orange { border-top-color: #f7941d !important; }
+    .border-green { border-top-color: #00a651 !important; }
+    .border-blue { border-top-color: #00aeef !important; }
+    .border-purple { border-top-color: #662d91 !important; }
+    .border-brown { border-top-color: #754c24 !important; }
+    .border-red { border-top-color: #ed1c24 !important; }
+    .border-black { border-top-color: #231f20 !important; }
+    .border-bronze { border-top-color: #cd7f32 !important; }
+    .border-silver { border-top-color: #c0c0c0 !important; }
+    .border-platinum { border-top-color: #e5e4e2 !important; }
+    .border-gold { border-top-color: #ffd700 !important; }
+    .border-going-gold { border-top-color: #ffaa00 !important; }
 
-    /* Custom Scrollbar */
-    .totem-grid::-webkit-scrollbar { height: 10px; }
-    .totem-grid::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-    .totem-grid::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
-    .totem-grid::-webkit-scrollbar-thumb:hover { background: #aaa; }
+    .totem-grid::-webkit-scrollbar { height: 20px; }
+    .totem-grid::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-radius: 10px; }
+    .totem-grid::-webkit-scrollbar-thumb { background: var(--cn-blue); border-radius: 10px; border: 4px solid #f5f6f8; }
+    .totem-grid::-webkit-scrollbar-thumb:hover { background: var(--cn-blue-dark); }
+
+    .scroll-container-wrapper { position: relative; }
+    .scroll-btn {
+      position: absolute;
+      right: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--cn-blue);
+      color: white;
+      border: 8px solid white;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      z-index: 100;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .scroll-btn:hover { background: #231f20; transform: translateY(-50%) scale(1.1); }
+    .scroll-btn:active { transform: translateY(-50%) scale(0.95); }
+    
+    @media (max-width: 768px) {
+      .scroll-btn { display: none; }
+    }
   </style>
 </head>
 <body>
   <% if (locals.user) { %>
-    <!-- Admin Sidebar -->
     <div class="sidebar">
-      <div class="p-4 text-center">
-        <img src="/img/cn_logo.png" height="30" alt="Code Ninjas">
-      </div>
+      <div class="p-4 text-center"><img src="/img/cn_logo.png" height="30" alt="Code Ninjas"></div>
       <div class="mt-4">
         <a href="/admin" class="nav-link d-block"><i class="bi bi-speedometer2 me-2"></i> Dashboard Home</a>
-        <a href="/admin/dashboard-editor" class="nav-link d-block"><i class="bi bi-pencil-square me-2"></i> Edit Ninja Dashboard</a>
-        <a href="/admin/ninjabucks-editor" class="nav-link d-block"><i class="bi bi-currency-dollar me-2"></i> Edit Ninja Bucks</a>
-        <a href="/admin/shop-editor" class="nav-link d-block"><i class="bi bi-cart4 me-2"></i> Edit Ninja Shop</a>
-        <a href="/admin/notm-archive-editor" class="nav-link d-block"><i class="bi bi-archive me-2"></i> Edit NOTM Archive</a>
-        <a href="/ninjabucks" class="nav-link d-block"><i class="bi bi-coin me-2"></i> Ninja Bucks</a>
-        <a href="/shop" class="nav-link d-block"><i class="bi bi-cart4 me-2"></i> Ninja Shop</a>
-        <a href="/notm-archive" class="nav-link d-block"><i class="bi bi-archive me-2"></i> NOTM Archive</a>
         <a href="/belts" class="nav-link d-block active"><i class="bi bi-trophy me-2"></i> Belts Totem</a>
-        <a href="/" target="_blank" class="nav-link d-block"><i class="bi bi-eye-fill me-2"></i> View Ninja Dashboard</a>
         <a href="/logout" class="nav-link d-block mt-4 text-danger"><i class="bi bi-box-arrow-right me-2"></i> Logout</a>
       </div>
     </div>
+  <% } %>
+
+  <% if (!locals.user) { %>
+  <!-- Under Construction overlay for public visitors -->
+  <div style="
+    position: fixed; inset: 0; z-index: 9000;
+    background: rgba(0,0,0,0.88);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; backdrop-filter: blur(6px);
+  ">
+    <div style="
+      background: linear-gradient(135deg, #1a1a2e 0%, #231f20 100%);
+      border: 3px solid #ffd700;
+      border-radius: 24px;
+      padding: 50px 60px;
+      max-width: 520px;
+      box-shadow: 0 0 60px rgba(255,215,0,0.2);
+    ">
+      <div style="font-size: 5rem; margin-bottom: 10px;">🚧</div>
+      <h1 style="color: #ffd700; font-size: 2.4rem; font-weight: 900; letter-spacing: 2px; margin-bottom: 12px;">Under Construction</h1>
+      <p style="color: rgba(255,255,255,0.65); font-size: 1.05rem; line-height: 1.6; margin-bottom: 28px;">
+        The Belts Totem is getting a major upgrade!<br>
+        Check back soon — it's going to be epic. 🥋
+      </p>
+      <a href="/" style="
+        display: inline-block;
+        background: #ffd700; color: #231f20;
+        font-weight: 800; font-size: 1rem;
+        padding: 12px 32px; border-radius: 50px;
+        text-decoration: none;
+        box-shadow: 0 4px 0 #c9a500;
+        transition: transform 0.1s;
+      " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+        ← Back to Dashboard
+      </a>
+    </div>
+    <div style="color: rgba(255,255,255,0.2); font-size: 0.7rem; margin-top: 24px; letter-spacing: 2px;">CODE NINJAS · BELTS TOTEM · COMING SOON</div>
+  </div>
   <% } %>
 
   <main class="main <%= locals.user ? 'with-sidebar' : 'no-sidebar' %>">
@@ -152,66 +218,79 @@
           <div class="d-flex gap-2 mb-3">
             <a href="/" class="btn btn-outline-secondary btn-sm btn-back"><i class="bi bi-arrow-left me-1"></i> Dashboard</a>
             <a href="/ninjabucks" class="btn btn-outline-primary btn-sm btn-back"><i class="bi bi-coin me-1"></i> Ninja Bucks</a>
-            <a href="/shop" class="btn btn-outline-warning btn-sm btn-back"><i class="bi bi-cart4 me-1"></i> Ninja Shop</a>
-            <a href="/notm-archive" class="btn btn-outline-info btn-sm btn-back"><i class="bi bi-archive me-1"></i> NOTM Archive</a>
           </div>
         <% } %>
         <h2 class="fw-bold mb-1">Belts Totem</h2>
-        <p class="text-muted">Celebrating the progress of all our Ninjas!</p>
+        <% if (locals.user) { %>
+          <p class="text-muted">Admin preview — public visitors see the "Under Construction" screen.</p>
+        <% } else { %>
+          <p class="text-muted">Celebrating the achievements of our Ninjas!</p>
+        <% } %>
       </div>
     </div>
 
-    <div class="totem-grid">
-      <% 
-        const getBeltClass = (name) => {
-          const n = name.toLowerCase();
-          if (n.includes('white')) return 'white-belt';
-          if (n.includes('yellow')) return 'yellow-belt';
-          if (n.includes('orange')) return 'orange-belt';
-          if (n.includes('green')) return 'green-belt';
-          if (n.includes('blue')) return 'blue-belt';
-          if (n.includes('purple')) return 'purple-belt';
-          if (n.includes('brown')) return 'brown-belt';
-          if (n.includes('red')) return 'red-belt';
-          if (n.includes('black')) return 'black-belt';
-          return '';
-        }
-        
-        totem.forEach(belt => { 
-          const beltClass = getBeltClass(belt.name);
-      %>
-        <div class="belt-column">
-          <div class="belt-header <%= beltClass %>">
-            <%= belt.name %>
-          </div>
-          
-          <% belt.degrees.forEach(degree => { %>
-            <div class="degree-card <%= beltClass %>-border">
-              <span class="degree-title"><%= degree.name || 'Current Level' %></span>
+    <div class="scroll-container-wrapper">
+      <div class="scroll-btn" id="scrollRightBtn">
+        <i class="bi bi-chevron-right"></i>
+      </div>
+
+      <div class="totem-grid" id="totemGrid">
+        <% 
+          const BELT_LIST = ['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black', 'Bronze', 'Silver', 'Platinum', 'Gold', 'Going Gold'];
+          BELT_LIST.forEach(beltName => { 
+            const beltClass = 'belt-' + beltName.toLowerCase().replace(' ', '-');
+            const borderClass = 'border-' + beltName.toLowerCase().replace(' ', '-');
+            const beltNinjas = ninjas.filter(n => n.currentBelt === beltName);
+        %>
+          <div class="belt-column">
+            <div class="belt-header <%= beltClass %>">
+              <%= beltName %>
+            </div>
+            
+            <div class="ninja-card <%= borderClass %>">
               <ul class="ninja-list">
-                <% if (degree.ninjas.length > 0) { %>
-                  <% degree.ninjas.forEach(ninja => { %>
-                    <li class="ninja-item"><%= ninja %></li>
+                <% if (beltNinjas.length > 0) { %>
+                  <% beltNinjas.forEach(ninja => { %>
+                    <li class="ninja-item"><%= ninja.name %></li>
                   <% }) %>
                 <% } else { %>
                   <li class="ninja-item text-muted small italic">Coming soon...</li>
                 <% } %>
               </ul>
             </div>
-          <% }) %>
-        </div>
-      <% }) %>
-    </div>
-
-    <% if (totem.length === 0) { %>
-      <div class="text-center py-5 card">
-        <i class="bi bi-award text-muted" style="font-size: 4rem;"></i>
-        <h4 class="text-muted mt-3">The Totem is being updated!</h4>
-        <p class="text-muted">Check back soon to see everyone's progress.</p>
+          </div>
+        <% }) %>
       </div>
-    <% } %>
+    </div>
   </main>
 
   <script src="/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const grid = document.getElementById('totemGrid');
+    const btn = document.getElementById('scrollRightBtn');
+    
+    btn.addEventListener('click', () => {
+      const scrollAmount = 400; // Scroll by roughly 1.5 columns
+      const maxScroll = grid.scrollWidth - grid.clientWidth;
+      
+      if (grid.scrollLeft >= maxScroll - 10) {
+        // If at the end, jump back to start
+        grid.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        grid.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      }
+    });
+
+    // Toggle button icon if at end
+    grid.addEventListener('scroll', () => {
+      const maxScroll = grid.scrollWidth - grid.clientWidth;
+      const icon = btn.querySelector('i');
+      if (grid.scrollLeft >= maxScroll - 10) {
+        icon.classList.replace('bi-chevron-right', 'bi-arrow-left-circle-fill');
+      } else {
+        icon.classList.replace('bi-arrow-left-circle-fill', 'bi-chevron-right');
+      }
+    });
+  </script>
 </body>
 </html>

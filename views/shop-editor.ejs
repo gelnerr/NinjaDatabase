@@ -1,189 +1,113 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Shop Editor - Admin</title>
-  <link rel="stylesheet" href="/css/bootstrap.min.css">
-  <link rel="stylesheet" href="/icons/bootstrap-icons.css">
-  <link rel="stylesheet" href="/css/responsive.css">
-  <style>
-    :root {
-      --cn-blue: #358ebc;
-      --cn-dark: #231f20;
-    }
-    body { background-color: #f5f6f8; font-family: 'Segoe UI', sans-serif; }
-    .sidebar {
-      width: 240px; background: var(--cn-dark); min-height: 100vh; color: white; position: fixed;
-    }
-    .main { margin-left: 240px; padding: 40px; }
-    .nav-link { color: #99aabb; padding: 12px 20px; border-radius: 8px; margin: 4px 10px; }
-    .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.1); color: white; }
-    .nav-link.active { background: var(--cn-blue); }
-    .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    .section-title { font-weight: 700; margin-bottom: 20px; color: var(--cn-dark); display: flex; align-items: center; gap: 10px; }
-  </style>
-</head>
-<body>
-  <div class="sidebar">
-    <div class="p-4 text-center">
-      <img src="/img/cn_logo.png" height="30" alt="Code Ninjas">
-    </div>
-    <div class="mt-4">
-      <a href="/admin" class="nav-link d-block"><i class="bi bi-speedometer2 me-2"></i> Dashboard Home</a>
-      <a href="/admin/dashboard-editor" class="nav-link d-block"><i class="bi bi-pencil-square me-2"></i> Edit Ninja Dashboard</a>
-      <a href="/admin/ninjabucks-editor" class="nav-link d-block"><i class="bi bi-currency-dollar me-2"></i> Edit Ninja Bucks</a>
-      <a href="/admin/shop-editor" class="nav-link d-block active"><i class="bi bi-cart4 me-2"></i> Edit Ninja Shop</a>
-      <a href="/ninjabucks" class="nav-link d-block"><i class="bi bi-coin me-2"></i> Ninja Bucks</a>
-      <a href="/shop" class="nav-link d-block"><i class="bi bi-cart4 me-2"></i> Ninja Shop</a>
-      <a href="/" target="_blank" class="nav-link d-block"><i class="bi bi-eye-fill me-2"></i> View Ninja Dashboard</a>
-      <a href="/logout" class="nav-link d-block mt-4 text-danger"><i class="bi bi-box-arrow-right me-2"></i> Logout</a>
-    </div>
-  </div>
+<%- include('partials/admin-header', { title: 'Edit Shop', active: 'editor' }) %>
 
-  <main class="main">
+<div class="page-header d-flex justify-content-between align-items-end">
+  <div>
+    <h2 class="page-title">Shop Management</h2>
+    <p class="text-muted mb-0">Manage items, prices, and inventory available for ninjas.</p>
+  </div>
+</div>
+
+<form action="/admin/update-shop" method="POST">
+  <div class="admin-card p-4 shadow-sm mb-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <h2 class="fw-bold">Ninja Shop Editor</h2>
-        <p class="text-muted">Manage items available in the Ninja Shop.</p>
-      </div>
-      <button type="button" class="btn btn-primary" onclick="addItem()">
+      <h5 class="fw-bold mb-0"><i class="bi bi-cart4 text-primary me-2"></i> Inventory Items</h5>
+      <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="addItem()">
         <i class="bi bi-plus-lg me-1"></i> Add New Item
       </button>
     </div>
 
-    <form action="/admin/update-shop" method="POST">
-      <div class="card p-4">
-        <h5 class="section-title"><i class="bi bi-bag-check"></i> Shop Items</h5>
-        
-        <div class="table-responsive">
-          <table class="table table-hover align-middle">
-            <thead class="table-light">
-              <tr>
-                <th style="width: 25%;">Item Name</th>
-                <th style="width: 15%;">Price (NB)</th>
-                <th style="width: 20%;">Category</th>
-                <th style="width: 20%;">Icon (Bootstrap Icon)</th>
-                <th style="width: 10%;" class="text-center">Stock</th>
-                <th style="width: 10%;" class="text-end">Action</th>
-              </tr>
-            </thead>
-            <tbody id="shop-container">
-              <% data.shopItems.forEach((item, index) => { %>
-                <tr class="shop-item-row" data-index="<%= index %>">
-                  <td>
-                    <input type="text" name="shop_name_<%= index %>" value="<%= item.name %>" class="form-control" placeholder="e.g. Sticker, Plushie" required>
-                  </td>
-                  <td>
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="bi bi-coin"></i></span>
-                      <input type="number" name="shop_price_<%= index %>" value="<%= item.price %>" class="form-control" placeholder="0" required>
-                    </div>
-                  </td>
-                  <td>
-                    <input type="text" name="shop_category_<%= index %>" value="<%= item.category %>" class="form-control" placeholder="e.g. Toys, Candy, Gear">
-                  </td>
-                  <td>
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="bi <%= item.image || 'bi-box-seam' %>"></i></span>
-                      <input type="text" name="shop_image_<%= index %>" value="<%= item.image || 'bi-box-seam' %>" class="form-control icon-input" placeholder="bi-star" oninput="updateIconPreview(this)">
-                    </div>
-                  </td>
-                  <td class="text-center">
-                    <div class="form-check form-switch d-inline-block">
-                      <input class="form-check-input" type="checkbox" name="shop_outOfStock_<%= index %>" <%= item.outOfStock ? 'checked' : '' %>>
-                    </div>
-                  </td>
-                  <td class="text-end">
-                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeItem(this)">
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </td>
-                </tr>
-              <% }) %>
-            </tbody>
-          </table>
-        </div>
+    <div id="itemList" class="row g-3">
+      <% (data.shopItems || []).forEach((item, i) => { %>
+        <div class="col-md-6 col-xl-4 shop-item-row">
+          <div class="border rounded-4 p-3 bg-light bg-opacity-50 h-100 position-relative">
+            <button type="button" class="btn-close position-absolute top-0 end-0 m-3" onclick="this.closest('.shop-item-row').remove()"></button>
+            
+            <div class="mb-3">
+              <label class="small fw-bold text-muted text-uppercase">Item Name</label>
+              <input type="text" name="shop_name_<%= i %>" class="form-control" value="<%= item.name %>" required>
+            </div>
+            
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="small fw-bold text-muted text-uppercase">Price (NB)</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-white"><i class="bi bi-coin text-warning"></i></span>
+                  <input type="number" name="shop_price_<%= i %>" class="form-control" value="<%= item.price %>" required>
+                </div>
+              </div>
+              <div class="col-6">
+                <label class="small fw-bold text-muted text-uppercase">Category</label>
+                <select name="shop_category_<%= i %>" class="form-select">
+                  <option value="Merch" <%= item.category === 'Merch' ? 'selected' : '' %>>Merch</option>
+                  <option value="Snacks" <%= item.category === 'Snacks' ? 'selected' : '' %>>Snacks</option>
+                  <option value="Events" <%= item.category === 'Events' ? 'selected' : '' %>>Events</option>
+                  <option value="Toys" <%= item.category === 'Toys' ? 'selected' : '' %>>Toys</option>
+                </select>
+              </div>
+            </div>
 
-        <% if (data.shopItems.length === 0) { %>
-          <div id="no-items-msg" class="text-center py-4 text-muted">
-            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
-            No items in the shop yet. Click "Add New Item" to start!
+            <div class="mb-3">
+              <label class="small fw-bold text-muted text-uppercase">Icon / Image URL</label>
+              <input type="text" name="shop_image_<%= i %>" class="form-control" value="<%= item.image %>" placeholder="bi-gift">
+            </div>
+
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="shop_outOfStock_<%= i %>" <%= item.outOfStock ? 'checked' : '' %>>
+              <label class="form-check-label small fw-bold">Out of Stock</label>
+            </div>
           </div>
-        <% } %>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+  <div class="text-end">
+    <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 shadow">
+      <i class="bi bi-check-all me-2"></i> Save Inventory
+    </button>
+  </div>
+</form>
+
+<script>
+  function addItem() {
+    const container = document.getElementById('itemList');
+    const index = container.querySelectorAll('.shop-item-row').length;
+    const div = document.createElement('div');
+    div.className = 'col-md-6 col-xl-4 shop-item-row';
+    div.innerHTML = `
+      <div class="border rounded-4 p-3 bg-light bg-opacity-50 h-100 position-relative">
+        <button type="button" class="btn-close position-absolute top-0 end-0 m-3" onclick="this.closest('.shop-item-row').remove()"></button>
+        <div class="mb-3">
+          <label class="small fw-bold text-muted text-uppercase">Item Name</label>
+          <input type="text" name="shop_name_${index}" class="form-control" placeholder="e.g. Code Ninjas Sticker" required>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label class="small fw-bold text-muted text-uppercase">Price (NB)</label>
+            <input type="number" name="shop_price_${index}" class="form-control" value="10" required>
+          </div>
+          <div class="col-6">
+            <label class="small fw-bold text-muted text-uppercase">Category</label>
+            <select name="shop_category_${index}" class="form-select">
+              <option value="Merch">Merch</option>
+              <option value="Snacks">Snacks</option>
+              <option value="Events">Events</option>
+              <option value="Toys">Toys</option>
+            </select>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="small fw-bold text-muted text-uppercase">Icon / Image URL</label>
+          <input type="text" name="shop_image_${index}" class="form-control" placeholder="bi-gift">
+        </div>
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" name="shop_outOfStock_${index}">
+          <label class="form-check-label small fw-bold">Out of Stock</label>
+        </div>
       </div>
+    `;
+    container.appendChild(div);
+  }
+</script>
 
-      <div class="text-end mt-4">
-        <button type="submit" class="btn btn-primary btn-lg px-5">Save Shop Changes</button>
-      </div>
-    </form>
-  </main>
-
-  <script>
-    function updateIconPreview(input) {
-      const icon = input.previousElementSibling.querySelector('i');
-      icon.className = 'bi ' + (input.value || 'bi-box-seam');
-    }
-
-    function addItem() {
-      const container = document.getElementById('shop-container');
-      const noItemsMsg = document.getElementById('no-items-msg');
-      if (noItemsMsg) noItemsMsg.remove();
-
-      const index = container.querySelectorAll('.shop-item-row').length;
-      const html = `
-        <tr class="shop-item-row" data-index="${index}">
-          <td>
-            <input type="text" name="shop_name_${index}" class="form-control" placeholder="Item Name" required>
-          </td>
-          <td>
-            <div class="input-group">
-              <span class="input-group-text"><i class="bi bi-coin"></i></span>
-              <input type="number" name="shop_price_${index}" class="form-control" placeholder="0" required>
-            </div>
-          </td>
-          <td>
-            <input type="text" name="shop_category_${index}" class="form-control" placeholder="Category">
-          </td>
-          <td>
-            <div class="input-group">
-              <span class="input-group-text"><i class="bi bi-box-seam"></i></span>
-              <input type="text" name="shop_image_${index}" value="bi-box-seam" class="form-control icon-input" placeholder="bi-star" oninput="updateIconPreview(this)">
-            </div>
-          </td>
-          <td class="text-center">
-            <div class="form-check form-switch d-inline-block">
-              <input class="form-check-input" type="checkbox" name="shop_outOfStock_${index}">
-            </div>
-          </td>
-          <td class="text-end">
-            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeItem(this)">
-              <i class="bi bi-trash"></i>
-            </button>
-          </td>
-        </tr>
-      `;
-      container.insertAdjacentHTML('beforeend', html);
-    }
-
-    function removeItem(btn) {
-      if (confirm('Are you sure you want to remove this item?')) {
-        btn.closest('.shop-item-row').remove();
-        reindexItems();
-      }
-    }
-
-    function reindexItems() {
-      const rows = document.querySelectorAll('.shop-item-row');
-      rows.forEach((row, i) => {
-        row.setAttribute('data-index', i);
-        row.querySelector('input[name^="shop_name"]').setAttribute('name', `shop_name_${i}`);
-        row.querySelector('input[name^="shop_price"]').setAttribute('name', `shop_price_${i}`);
-        row.querySelector('input[name^="shop_category"]').setAttribute('name', `shop_category_${i}`);
-        row.querySelector('input[name^="shop_image"]').setAttribute('name', `shop_image_${i}`);
-        row.querySelector('input[name^="shop_outOfStock"]').setAttribute('name', `shop_outOfStock_${i}`);
-      });
-    }
-  </script>
-</body>
-</html>
+<%- include('partials/admin-footer') %>

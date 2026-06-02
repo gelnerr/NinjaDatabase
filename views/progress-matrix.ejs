@@ -1,0 +1,78 @@
+<%- include('partials/admin-header', { title: 'Belt Matrix', active: 'matrix' }) %>
+
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h2 class="page-title">Progress Matrix</h2>
+    <p class="text-muted mb-0">Overview of all active ninjas by belt rank.</p>
+  </div>
+</div>
+
+<style>
+  .matrix-container { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow-x: auto; }
+  .belt-cell { min-width: 140px; text-align: center; vertical-align: top; border: 1px solid #dee2e6; }
+  .ninja-tag { font-size: 0.8rem; padding: 4px 10px; margin: 4px; display: block; border-radius: 6px; background: white; border-left: 4px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: 600; text-align: left; }
+
+  .header-white { background: #f8f9fa; color: #333; }
+  .header-yellow { background: #fff200; color: #333; }
+  .header-orange { background: #f7941d; color: white; }
+  .header-green { background: #00a651; color: white; }
+  .header-blue { background: #00aeef; color: white; }
+  .header-purple { background: #662d91; color: white; }
+  .header-brown { background: #754c24; color: white; }
+  .header-red { background: #ed1c24; color: white; }
+  .header-black { background: #231f20; color: white; }
+  .header-bronze { background: #cd7f32; color: white; }
+  .header-silver { background: #c0c0c0; color: #333; }
+  .header-platinum { background: #e5e4e2; color: #333; }
+  .header-gold { background: #ffd700; color: #333; }
+  .header-going-gold { background: linear-gradient(45deg, #ffd700, #ffaa00); color: white; }
+
+  .tag-white { border-left-color: #eee; }
+  .tag-yellow { border-left-color: #fff200; }
+  .tag-orange { border-left-color: #f7941d; }
+  .tag-green { border-left-color: #00a651; }
+  .tag-blue { border-left-color: #00aeef; }
+  .tag-purple { border-left-color: #662d91; }
+  .tag-brown { border-left-color: #754c24; }
+  .tag-red { border-left-color: #ed1c24; }
+  .tag-black { border-left-color: #231f20; }
+  .tag-bronze { border-left-color: #cd7f32; }
+  .tag-silver { border-left-color: #c0c0c0; }
+  .tag-platinum { border-left-color: #e5e4e2; }
+  .tag-gold { border-left-color: #ffd700; }
+  .tag-going-gold { border-left-color: #ffaa00; }
+</style>
+
+<div class="matrix-container">
+  <table class="table table-bordered mb-0">
+    <thead>
+      <tr>
+        <%
+          const BELT_LIST = ['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black', 'Bronze', 'Silver', 'Platinum', 'Gold', 'Going Gold'];
+          BELT_LIST.forEach(belt => {
+            const cls = 'header-' + belt.toLowerCase().replace(' ', '-');
+        %>
+          <th class="belt-cell <%= cls %> p-3"><%= belt %></th>
+        <% }); %>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <% BELT_LIST.forEach(belt => { %>
+          <td class="belt-cell p-2">
+            <%
+              const beltNinjas = ninjas.filter(n => n.currentBelt === belt);
+              const tagCls = 'tag-' + belt.toLowerCase().replace(' ', '-');
+              beltNinjas.forEach(ninja => {
+            %>
+              <div class="ninja-tag <%= tagCls %>"><%= ninja.name %></div>
+            <% }); %>
+            <% if(beltNinjas.length === 0) { %><div class="text-muted small text-center py-3">-</div><% } %>
+          </td>
+        <% }); %>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<%- include('partials/admin-footer') %>

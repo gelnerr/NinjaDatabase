@@ -1,0 +1,87 @@
+<%- include('partials/admin-header', { title: 'Boss Battle', active: 'boss' }) %>
+
+<div class="page-header">
+  <h2 class="page-title">Boss Battle Event</h2>
+  <p class="text-muted">Control the raid event displayed on the lobby dashboard.</p>
+</div>
+
+<div class="row">
+  <div class="col-lg-7">
+    <div class="admin-card p-4 p-md-5 shadow-sm mb-4">
+      <form action="/admin/boss-battle/update" method="POST">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="fw-bold mb-0">Boss Configuration</h5>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="bossActive" id="bossActive" <%= data.bossActive ? 'checked' : '' %> style="width: 3em; height: 1.5em;">
+            <label class="form-check-label ms-2 fw-bold" for="bossActive">RAID LIVE</label>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label small fw-bold text-uppercase text-muted">Boss Name</label>
+          <input type="text" name="bossName" class="form-control form-control-lg" value="<%= data.bossName %>" required>
+        </div>
+
+        <div class="row g-4 mb-4">
+          <div class="col-md-6">
+            <label class="form-label small fw-bold text-uppercase text-muted">Current HP</label>
+            <div class="input-group input-group-lg">
+              <span class="input-group-text bg-danger bg-opacity-10 text-danger border-danger border-opacity-25"><i class="bi bi-heart-fill"></i></span>
+              <input type="number" name="bossHP" class="form-control border-danger border-opacity-25" value="<%= data.bossHP %>" required>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-bold text-uppercase text-muted">Max HP</label>
+            <div class="input-group input-group-lg">
+              <span class="input-group-text bg-light"><i class="bi bi-shield-shaded"></i></span>
+              <input type="number" name="bossMaxHP" class="form-control" value="<%= data.bossMaxHP %>" required>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label small fw-bold text-uppercase text-muted">Boss Image URL</label>
+          <input type="text" name="bossImage" class="form-control" value="<%= data.bossImage || '/img/cn_logo.png' %>" placeholder="/img/boss_m2026.jpg">
+          <div class="form-text">URL of the boss character image shown on the dashboard.</div>
+        </div>
+
+        <div class="mb-5">
+          <label class="form-label small fw-bold text-uppercase text-muted">Background Image URL (Optional)</label>
+          <input type="text" name="backgroundImage" class="form-control" value="<%= data.backgroundImage || '' %>" placeholder="https://...">
+          <div class="form-text">Overrides the theme background on the lobby screen. Leave blank for theme default.</div>
+        </div>
+
+        <div class="d-grid">
+          <button type="submit" class="btn btn-primary btn-lg rounded-pill py-3 fw-bold shadow">
+            <i class="bi bi-save2-fill me-2"></i> Update Event Status
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="admin-card p-4 shadow-sm bg-dark text-white">
+      <h5 class="fw-bold mb-4">Dashboard Preview</h5>
+      <div class="p-4 rounded-3" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+        <div class="d-flex justify-content-between mb-2">
+           <span class="fw-bold"><%= data.bossName %></span>
+           <span class="badge <%= data.bossActive ? 'bg-primary' : 'bg-secondary' %>"><%= data.bossActive ? 'LIVE' : 'IDLE' %></span>
+        </div>
+        <div class="progress mb-3" style="height: 12px; background: rgba(255,255,255,0.1);">
+           <div class="progress-bar bg-primary" role="progressbar" style="width: <%= (data.bossHP / data.bossMaxHP) * 100 %>%"></div>
+        </div>
+        <div class="text-center small opacity-50">
+           <%= data.bossHP %> / <%= data.bossMaxHP %> HP
+        </div>
+      </div>
+      
+      <div class="mt-4 p-3 rounded bg-primary bg-opacity-10 border border-primary border-opacity-25 small">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        Ninjas deal damage to the boss when you award them NinjaBucks or log belt updates!
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/admin-footer') %>

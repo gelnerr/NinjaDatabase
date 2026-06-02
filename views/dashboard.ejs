@@ -683,6 +683,18 @@
       <div class="fun-fact-text">
         "<%= funFact %>"
       </div>
+      <% if (bossActive) { %>
+        <div id="bossWidget" onclick="openBossOverlay()" style="cursor: pointer; margin-top: 18px; border-top: 2px dashed rgba(0,0,0,0.1); padding-top: 14px; text-align: center;">
+          <div class="boss-live-badge" style="display: inline-block; background: #e63946; color: white; font-size: 0.65rem; font-weight: 800; letter-spacing: 2px; padding: 3px 10px; border-radius: 20px; margin-bottom: 10px; text-transform: uppercase;">⚔ BOSS BATTLE LIVE</div>
+          <img src="<%= bossImage || '/img/cn_logo.png' %>" alt="<%= bossName %>" style="width: 80px; height: 80px; object-fit: contain; display: block; margin: 0 auto 8px; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3));">
+          <div style="font-weight: 800; font-size: 0.9rem; margin-bottom: 6px;"><%= bossName %></div>
+          <div class="boss-widget-hp-outer" style="height: 10px; background: rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden;">
+            <div class="boss-widget-hp-inner" style="height: 100%; width: <%= bossMaxHP > 0 ? Math.round((bossHP / bossMaxHP) * 100) : 0 %>%; background: #e63946; border-radius: 10px; transition: width 1s ease;"></div>
+          </div>
+          <div style="font-size: 0.7rem; opacity: 0.6; margin-top: 4px;"><%= bossHP.toLocaleString() %> / <%= bossMaxHP.toLocaleString() %> HP</div>
+          <div style="font-size: 0.65rem; opacity: 0.5; margin-top: 6px;">Tap to enter the battle &rsaquo;</div>
+        </div>
+      <% } %>
     </div>
 
     <div class="kid-card animated" style="animation-delay: -5s; grid-column: span 3;">
@@ -696,6 +708,172 @@
       </div>
     </div>
   </div>
+
+  <!-- Boss Battle Full-Screen Overlay -->
+  <% if (bossActive) { %>
+  <div id="bossOverlay" onclick="closeBossOverlay()" style="
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    background: #000; overflow: hidden; cursor: pointer;
+  ">
+    <!-- Side panels -->
+    <div id="bossLeftPanel" style="
+      position: absolute; left: 0; top: 0; bottom: 0; width: 22%;
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 40px 30px; opacity: 0; transform: translateX(-60px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    ">
+      <div style="color: #ff6b6b; font-size: 0.75rem; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 20px;">
+        ⚔ Top Damage Dealers
+      </div>
+      <% (topDamagers || []).forEach((d, i) => { %>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px; color: white;">
+          <span style="font-size: 1.4rem; width: 32px; text-align: center;"><%= ['🥇','🥈','🥉','4️⃣','5️⃣'][i] %></span>
+          <div>
+            <div style="font-weight: 700; font-size: 0.95rem;"><%= d.name %></div>
+            <div style="font-size: 0.75rem; color: #ff6b6b; font-weight: 600;"><%= d.value.toLocaleString() %> dmg total</div>
+          </div>
+        </div>
+      <% }) %>
+      <% if (!topDamagers || topDamagers.length === 0) { %>
+        <div style="color: rgba(255,255,255,0.3); font-size: 0.85rem;">No damage logged yet...</div>
+      <% } %>
+    </div>
+
+    <div id="bossRightPanel" style="
+      position: absolute; right: 0; top: 0; bottom: 0; width: 22%;
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 40px 30px; opacity: 0; transform: translateX(60px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    ">
+      <div style="color: #ffd93d; font-size: 0.75rem; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 20px;">
+        🗡 Most Attacks
+      </div>
+      <% (topAttackers || []).forEach((a, i) => { %>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px; color: white;">
+          <span style="font-size: 1.4rem; width: 32px; text-align: center;"><%= ['🥇','🥈','🥉','4️⃣','5️⃣'][i] %></span>
+          <div>
+            <div style="font-weight: 700; font-size: 0.95rem;"><%= a.name %></div>
+            <div style="font-size: 0.75rem; color: #ffd93d; font-weight: 600;"><%= a.value.toLocaleString() %> attacks</div>
+          </div>
+        </div>
+      <% }) %>
+      <% if (!topAttackers || topAttackers.length === 0) { %>
+        <div style="color: rgba(255,255,255,0.3); font-size: 0.85rem;">No attacks logged yet...</div>
+      <% } %>
+    </div>
+
+    <!-- Center boss content -->
+    <div id="bossCenterContent" style="
+      position: absolute; left: 22%; right: 22%; top: 0; bottom: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center;
+    ">
+      <img id="bossOverlayImg" src="<%= bossImage || '/img/cn_logo.png' %>" alt="<%= bossName %>" style="
+        max-height: 42vh; max-width: 100%; object-fit: contain;
+        opacity: 0; transform: scale(0.85);
+        transition: opacity 1s ease, transform 1s ease;
+        filter: drop-shadow(0 0 40px rgba(230, 57, 70, 0.6));
+      ">
+
+      <div id="bossOverlayInfo" style="opacity: 0; transform: translateY(20px); transition: opacity 0.8s ease, transform 0.8s ease; margin-top: 28px; width: 100%; padding: 0 20px;">
+        <div id="bossOverlayName" style="color: white; font-size: clamp(1.6rem, 3vw, 2.8rem); font-weight: 900; margin-bottom: 14px; letter-spacing: 2px; text-shadow: 0 0 30px rgba(230,57,70,0.8);"><%= bossName %></div>
+        <div style="max-width: 420px; margin: 0 auto;">
+          <div style="background: rgba(255,255,255,0.08); border-radius: 12px; height: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+            <div id="bossOverlayHpBar" style="
+              height: 100%; border-radius: 12px;
+              background: linear-gradient(90deg, #e63946, #ff6b6b);
+              box-shadow: 0 0 15px rgba(230,57,70,0.6);
+              width: 0%;
+              transition: width 1.5s ease;
+            "></div>
+          </div>
+          <div style="color: rgba(255,255,255,0.6); font-size: 0.85rem; margin-top: 8px; font-weight: 600;">
+            <span id="bossOverlayHpText"><%= bossHP.toLocaleString() %></span> / <%= bossMaxHP.toLocaleString() %> HP
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.25); font-size: 0.75rem; letter-spacing: 1px;">
+      Tap anywhere to close
+    </div>
+  </div>
+  <% } %>
+
+  <style>
+    @keyframes bossBreathing {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 40px rgba(230,57,70,0.5)); }
+      50% { transform: scale(1.04); filter: drop-shadow(0 0 60px rgba(230,57,70,0.9)); }
+    }
+    .boss-breathing { animation: bossBreathing 3s ease-in-out infinite; }
+  </style>
+
+  <script>
+    const BOSS_HP = <%= bossHP %>;
+    const BOSS_MAX_HP = <%= bossMaxHP %>;
+
+    function openBossOverlay() {
+      const overlay = document.getElementById('bossOverlay');
+      if (!overlay) return;
+      overlay.style.display = 'block';
+      overlay.style.opacity = '0';
+
+      // Phase 1: fade in black
+      requestAnimationFrame(() => {
+        overlay.style.transition = 'opacity 0.5s ease';
+        overlay.style.opacity = '1';
+      });
+
+      // Phase 2: boss image fades in
+      setTimeout(() => {
+        const img = document.getElementById('bossOverlayImg');
+        img.style.opacity = '1';
+        img.style.transform = 'scale(1)';
+        setTimeout(() => img.classList.add('boss-breathing'), 1000);
+      }, 600);
+
+      // Phase 3: boss info fades in + HP bar animates
+      setTimeout(() => {
+        const info = document.getElementById('bossOverlayInfo');
+        info.style.opacity = '1';
+        info.style.transform = 'translateY(0)';
+        const hpPct = BOSS_MAX_HP > 0 ? Math.round((BOSS_HP / BOSS_MAX_HP) * 100) : 0;
+        setTimeout(() => {
+          document.getElementById('bossOverlayHpBar').style.width = hpPct + '%';
+        }, 100);
+      }, 1400);
+
+      // Phase 4: side panels slide in
+      setTimeout(() => {
+        document.getElementById('bossLeftPanel').style.opacity = '1';
+        document.getElementById('bossLeftPanel').style.transform = 'translateX(0)';
+        document.getElementById('bossRightPanel').style.opacity = '1';
+        document.getElementById('bossRightPanel').style.transform = 'translateX(0)';
+      }, 2000);
+    }
+
+    function closeBossOverlay() {
+      const overlay = document.getElementById('bossOverlay');
+      if (!overlay) return;
+      overlay.style.transition = 'opacity 0.4s ease';
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        // Reset for next open
+        const img = document.getElementById('bossOverlayImg');
+        img.classList.remove('boss-breathing');
+        img.style.opacity = '0';
+        img.style.transform = 'scale(0.85)';
+        document.getElementById('bossOverlayInfo').style.opacity = '0';
+        document.getElementById('bossOverlayInfo').style.transform = 'translateY(20px)';
+        document.getElementById('bossOverlayHpBar').style.width = '0%';
+        document.getElementById('bossLeftPanel').style.opacity = '0';
+        document.getElementById('bossLeftPanel').style.transform = 'translateX(-60px)';
+        document.getElementById('bossRightPanel').style.opacity = '0';
+        document.getElementById('bossRightPanel').style.transform = 'translateX(60px)';
+      }, 400);
+    }
+  </script>
 
   <script>
     function updateSessionTimer() {

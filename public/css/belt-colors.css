@@ -1,0 +1,15 @@
+/* Shared belt color definitions used across admin and public views */
+.belt-white    { background-color: #f8f9fa; color: #333 !important; }
+.belt-yellow   { background-color: #fff200; color: #333 !important; }
+.belt-orange   { background-color: #f7941d; color: white !important; }
+.belt-green    { background-color: #00a651; color: white !important; }
+.belt-blue     { background-color: #00aeef; color: white !important; }
+.belt-purple   { background-color: #662d91; color: white !important; }
+.belt-brown    { background-color: #754c24; color: white !important; }
+.belt-red      { background-color: #ed1c24; color: white !important; }
+.belt-black    { background-color: #231f20; color: white !important; }
+.belt-bronze   { background-color: #cd7f32; color: white !important; }
+.belt-silver   { background-color: #c0c0c0; color: #333 !important; }
+.belt-platinum { background-color: #e5e4e2; color: #333 !important; }
+.belt-gold     { background: linear-gradient(45deg, #ffd700, #ffaa00); color: #333 !important; }
+.belt-going-gold { background: linear-gradient(45deg, #ffd700, #ffaa00); color: white !important; box-shadow: 0 0 6px rgba(255,215,0,0.4); }

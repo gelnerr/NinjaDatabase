@@ -1,384 +1,221 @@
+<%- include('partials/admin-header', { title: 'Admin Home', active: 'dashboard' }) %>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Code Ninjas Dashboard</title>
-  <!-- Bootstrap CSS -->
-  <link rel="stylesheet" href="/css/bootstrap.min.css">
-  <!-- Bootstrap Icons -->
-  <link rel="stylesheet" href="/icons/bootstrap-icons.css">
-  <link rel="stylesheet" href="/css/responsive.css">
-  <style>
-    :root {
-      --cn-blue: #358ebc;
-      --cn-blue-dark: #1e6a94;
-      --cn-blue-light: #e8f4fb;
-      --cn-black: #1a1a1a;
-      --cn-dark: #231f20;
-      --cn-gray: #f5f6f8;
-      --cn-gray2: #eaecf0;
-      --cn-border: #dde1e7;
-      --cn-text: #1a1a1a;
-      --cn-muted: #6b7280;
-      --cn-white: #ffffff;
-    }
-    * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+<div class="page-header d-flex justify-content-between align-items-end">
+  <div>
+    <h2 class="page-title">Sensei Dashboard</h2>
+    <p class="text-muted mb-0">System status and quick navigation.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="/admin/add-ninja" class="btn btn-primary rounded-pill px-4 shadow-sm">
+      <i class="bi bi-person-plus-fill me-2"></i> Add Ninja
+    </a>
+    <div class="dropdown">
+      <button class="btn btn-outline-primary dropdown-toggle rounded-pill px-4" type="button" data-bs-toggle="dropdown">
+        <i class="bi bi-database-fill-up me-1"></i> Data Migration
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+        <li><a class="dropdown-item py-2" href="#" onclick="migrateDatabase(false)"><i class="bi bi-arrow-repeat me-2"></i> Sync Latest Data</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item text-danger py-2" href="#" onclick="migrateDatabase(true)"><i class="bi bi-trash3 me-2"></i> Fresh Start (Wipe & Import)</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
 
-    .wrap { display:flex; min-height:100vh; background: var(--cn-gray); }
-
-    .sidebar {
-      width: 240px;
-      background: var(--cn-dark);
-      min-height: 100vh;
-      color: white;
-      position: fixed;
-      z-index: 1000;
-    }
-    .main { flex: 1; padding: 24px 28px; margin-left: 240px; overflow-y: auto; }
-
-    .nav-link { color: #99aabb; padding: 12px 20px; border-radius: 8px; margin: 4px 10px; text-decoration: none; display: block; font-size: 14px; transition: all 0.2s; }
-    .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.1); color: white; }
-    .nav-link.active { background: var(--cn-blue); }
-
-  .topbar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; }
-  .topbar h1 { font-size: 20px; font-weight: 600; color: var(--cn-black); }
-  .topbar p { font-size: 12px; color: var(--cn-muted); margin-top: 3px; }
-  .date-badge {
-    background: var(--cn-white);
-    border: 1px solid var(--cn-border);
-    border-radius: 7px;
-    padding: 7px 13px;
-    font-size: 12px;
-    color: var(--cn-muted);
-    white-space: nowrap;
+<style>
+  .nav-card {
+    background: white; border-radius: 16px; border: 1px solid var(--cn-border);
+    padding: 24px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    height: 100%; display: flex; flex-direction: column; text-decoration: none !important; color: inherit;
   }
-
-  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
-  .stat-card {
-    background: var(--cn-white);
-    border: 1px solid var(--cn-border);
-    border-radius: 10px;
-    padding: 15px 16px;
-    border-top: 3px solid var(--cn-blue);
+  .nav-card:hover { border-color: var(--cn-blue); transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+  .icon-box {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; margin-bottom: 20px;
   }
-  .stat-card.accent-black { border-top-color: var(--cn-dark); }
-  .stat-card.accent-teal { border-top-color: #2a9d8f; }
-  .stat-card.accent-amber { border-top-color: #e09f00; }
-  .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--cn-muted); margin-bottom: 5px; }
-  .stat-value { font-size: 24px; font-weight: 600; color: var(--cn-black); }
-  .stat-sub { font-size: 11px; color: var(--cn-muted); margin-top: 3px; }
-
-  .section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; margin-top: 4px; }
-  .section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--cn-muted); }
-  .section-line { flex: 1; height: 1px; background: var(--cn-border); }
-
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px; }
-
-  .card {
-    background: var(--cn-white);
-    border: 1px solid var(--cn-border);
-    border-radius: 10px;
-    padding: 16px 18px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    display: flex;
-    flex-direction: column;
-    gap: 9px;
+  .ib-blue { background: #e8f4fb; color: var(--cn-blue); }
+  .ib-green { background: #e6f6f4; color: #1a7a72; }
+  .ib-amber { background: #fef9e7; color: #9a6e00; }
+  .ib-purple { background: #f3e5f5; color: #662d91; }
+  
+  .nav-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--cn-dark); }
+  .nav-card p { font-size: 14px; color: #6b7280; margin-bottom: 0; line-height: 1.5; }
+  
+  .boss-banner {
+    background: linear-gradient(135deg, #231f20 0%, #3a3536 100%);
+    border-radius: 20px; padding: 30px; color: white; margin-bottom: 40px;
+    border: 1px solid rgba(255,255,255,0.1); position: relative; overflow: hidden;
   }
-  .card:hover { border-color: var(--cn-blue); box-shadow: 0 2px 12px rgba(53,142,188,0.12); transform: translateY(-2px); }
-
-  .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
-  .card-icon {
-    width: 36px; height: 36px; border-radius: 8px;
-    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  .boss-banner::after {
+    content: 'BOSS'; position: absolute; right: -20px; bottom: -30px;
+    font-size: 120px; font-weight: 900; color: rgba(255,255,255,0.03); pointer-events: none;
   }
-  .icon-blue { background: var(--cn-blue-light); color: var(--cn-blue); }
-  .icon-dark { background: #f0f0f2; color: var(--cn-dark); }
-  .icon-teal { background: #e6f6f4; color: #1a7a72; }
-  .icon-amber { background: #fef9e7; color: #9a6e00; }
-
-  .card-badge {
-    font-size: 10px; font-weight: 600;
-    padding: 3px 7px; border-radius: 4px;
-    text-transform: uppercase; letter-spacing: 0.4px;
-  }
-  .badge-action { background: #e8f4fb; color: var(--cn-blue-dark); }
-  .badge-data { background: #f0f0f2; color: #444; }
-  .badge-log { background: #fef9e7; color: #9a6e00; }
-  .badge-event { background: #e6f6f4; color: #1a7a72; }
-
-  .card h3 { font-size: 13px; font-weight: 600; color: var(--cn-black); }
-  .card p { font-size: 11.5px; color: var(--cn-muted); line-height: 1.5; }
-  .card-arrow { font-size: 12px; color: #ccc; transition: color 0.15s; }
-  .card:hover .card-arrow { color: var(--cn-blue); }
-
-  .boss-card {
-    background: var(--cn-dark);
-    border-radius: 10px;
-    padding: 18px 20px;
-    color: white;
-  }
-  .boss-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 13px; }
-  .boss-title { font-size: 13px; font-weight: 600; }
-  .boss-live { font-size: 10px; padding: 3px 8px; border-radius: 4px; background: rgba(53,142,188,0.25); color: #80ccf0; font-weight: 600; letter-spacing: 0.5px; }
-  .hp-label { font-size: 11px; color: #8899aa; margin-bottom: 6px; }
-  .hp-bar-bg { background: rgba(255,255,255,0.1); border-radius: 4px; height: 7px; overflow: hidden; }
-  .hp-bar { height: 7px; border-radius: 4px; background: var(--cn-blue); width: 62%; }
-  .hp-text { display: flex; justify-content: space-between; font-size: 11px; color: #8899aa; margin-top: 6px; }
+  .hp-bar-outer { background: rgba(255,255,255,0.1); border-radius: 10px; height: 12px; margin: 15px 0; overflow: hidden; }
+  .hp-bar-inner { height: 100%; border-radius: 10px; background: var(--cn-blue); transition: width 1s ease; }
 </style>
 
-<div class="wrap">
-  <aside class="sidebar">
-    <div class="p-4 text-center border-bottom border-secondary border-opacity-25 bg-white">
-      <img src="/img/cn_logo.png" height="30" alt="Code Ninjas">
+<!-- Boss Battle Quick Status -->
+<% if (data.bossActive) { %>
+<div class="boss-banner shadow-sm mb-4">
+  <div class="row align-items-center">
+    <div class="col-md-8">
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <h4 class="mb-0 fw-bold"><%= data.bossName %></h4>
+        <span class="badge bg-primary px-3">LIVE BATTLE</span>
+      </div>
+      <div class="hp-bar-outer"><div class="hp-bar-inner" style="width: <%= data.bossMaxHP > 0 ? Math.round((data.bossHP / data.bossMaxHP) * 100) : 0 %>%"></div></div>
+      <div class="d-flex justify-content-between small opacity-75">
+        <span>Current Health</span>
+        <span><%= data.bossHP.toLocaleString() %> / <%= data.bossMaxHP.toLocaleString() %> HP (<%= data.bossMaxHP > 0 ? Math.round((data.bossHP / data.bossMaxHP) * 100) : 0 %>%)</span>
+      </div>
     </div>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+      <a href="/admin/boss-battle" class="btn btn-outline-light px-4 border-2 fw-bold rounded-pill">Manage Event</a>
+    </div>
+  </div>
+</div>
+<% } %>
 
-    <div class="mt-4">
-      <a href="/admin" class="nav-link active"><i class="bi bi-speedometer2 me-2"></i> Dashboard Home</a>
-      <a href="/admin/dashboard-editor" class="nav-link"><i class="bi bi-pencil-square me-2"></i> Edit Ninja Dashboard</a>
-      <a href="/admin/ninja-bucks-award" class="nav-link"><i class="bi bi-coin me-2"></i> Award Ninja Bucks</a>
-      <a href="/admin/ninjabucks-editor" class="nav-link"><i class="bi bi-currency-dollar me-2"></i> Edit Ninja Bucks</a>
-      <a href="/ninjabucks" class="nav-link"><i class="bi bi-coin me-2"></i> Ninja Bucks</a>
-      <a href="/" target="_blank" class="nav-link"><i class="bi bi-eye-fill me-2"></i> View Ninja Dashboard</a>
-      <a href="/logout" class="nav-link mt-4 text-danger"><i class="bi bi-box-arrow-right me-2"></i> Logout</a>
-    </div>
-  </aside>
+<div class="row g-4">
+  <!-- Core Actions -->
+  <div class="col-md-4">
+    <a href="/admin/update-progress" class="nav-card">
+      <div class="icon-box ib-blue"><i class="bi bi-graph-up-arrow"></i></div>
+      <h3>Update Progress</h3>
+      <p>Log belt tests and rank advancements for ninjas.</p>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="/admin/ninja-bucks-award" class="nav-card">
+      <div class="icon-box ib-amber"><i class="bi bi-coin"></i></div>
+      <h3>Award Ninja Bucks</h3>
+      <p>Instantly award bucks for achievements or birthdays.</p>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="/admin/buttons" class="nav-card">
+      <div class="icon-box ib-blue"><i class="bi bi-lightning-charge"></i></div>
+      <h3>Quick Controls</h3>
+      <p>Fast rewards and macros for session management.</p>
+    </a>
+  </div>
 
-  <main class="main">
-    <div class="topbar">
-      <div>
-        <h1>Sensei Dashboard</h1>
-        <p>Track your ninjas' progress, rewards, and events</p>
-      </div>
-      <div class="date-badge" id="date-badge">Loading...</div>
-    </div>
+  <!-- Database & View -->
+  <div class="col-md-4">
+    <a href="/admin/master-data" class="nav-card">
+      <div class="icon-box ib-purple"><i class="bi bi-database-fill"></i></div>
+      <h3>Ninja Master Data</h3>
+      <p>View and manage the full database of ninjas.</p>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="/admin/progress-matrix" class="nav-card">
+      <div class="icon-box ib-purple"><i class="bi bi-grid-3x3-gap-fill"></i></div>
+      <h3>Progress Matrix</h3>
+      <p>See current distribution across all belt ranks.</p>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="/admin/progress-log" class="nav-card">
+      <div class="icon-box ib-purple"><i class="bi bi-clipboard-pulse"></i></div>
+      <h3>Advancement History</h3>
+      <p>View chronological history of all belt level-ups.</p>
+    </a>
+  </div>
 
-    <!-- Stats Hidden for now -->
-    <div class="stat-row" style="display: none;">
-      <div class="stat-card">
-        <div class="stat-label">Active Ninjas</div>
-        <div class="stat-value">48</div>
-        <div class="stat-sub">Checked in today</div>
-      </div>
-      <div class="stat-card accent-amber">
-        <div class="stat-label">NinjaBucks Today</div>
-        <div class="stat-value">1,240</div>
-        <div class="stat-sub">Awarded this session</div>
-      </div>
-      <div class="stat-card accent-teal">
-        <div class="stat-label">Belt Advancements</div>
-        <div class="stat-value">3</div>
-        <div class="stat-sub">This week</div>
-      </div>
-      <div class="stat-card accent-black">
-        <div class="stat-label">Boss HP Remaining</div>
-        <div class="stat-value">62%</div>
-        <div class="stat-sub">Today's event</div>
-      </div>
-    </div>
-
-    <div class="section-header"><div class="section-title">Ninja Dashboard</div><div class="section-line"></div></div>
-    <div class="grid">
-      <a href="/admin/dashboard-editor" style="text-decoration: none; color: inherit;">
-        <div class="card">
-          <div class="card-top">
-            <div class="card-icon icon-teal"><i class="bi bi-display"></i></div>
-            <span class="card-badge badge-event">Public</span>
-          </div>
-          <h3>Edit Ninja Dashboard</h3>
-          <p>Update activities, events, and Ninja of the Month for the lobby display.</p>
-          <div class="card-arrow">→</div>
-        </div>
-      </a>
-      <a href="/admin/notm-archive-editor" style="text-decoration: none; color: inherit;">
-        <div class="card">
-          <div class="card-top">
-            <div class="card-icon icon-teal"><i class="bi bi-archive"></i></div>
-            <span class="card-badge badge-action">Edit</span>
-          </div>
-          <h3>Edit NOTM Archive</h3>
-          <p>Manage, edit, or delete historical records of past Ninja of the Month winners.</p>
-          <div class="card-arrow">→</div>
-        </div>
-      </a>
-      <a href="/admin/ninjabucks-editor" style="text-decoration: none; color: inherit;">
-        <div class="card">
-          <div class="card-top">
-            <div class="card-icon icon-blue"><i class="bi bi-currency-dollar"></i></div>
-            <span class="card-badge badge-action">Config</span>
-          </div>
-          <h3>Edit Ninja Bucks</h3>
-          <p>Configure Google Spreadsheet integration and sync ninja leaderboard data.</p>
-          <div class="card-arrow">→</div>
-        </div>
-      </a>
-      <a href="/admin/shop-editor" style="text-decoration: none; color: inherit;">
-        <div class="card">
-          <div class="card-top">
-            <div class="card-icon icon-teal"><i class="bi bi-cart4"></i></div>
-            <span class="card-badge badge-event">Public</span>
-          </div>
-          <h3>Edit Ninja Shop</h3>
-          <p>Manage items, prices, and categories available in the Ninja Shop.</p>
-          <div class="card-arrow">→</div>
-        </div>
-      </a>
-      <a href="/" target="_blank" style="text-decoration: none; color: inherit;">
-        <div class="card">
-          <div class="card-top">
-            <div class="card-icon icon-amber"><i class="bi bi-eye-fill"></i></div>
-            <span class="card-badge badge-log">View</span>
-          </div>
-          <h3>View Ninja Dashboard</h3>
-          <p>Open the kid-friendly dashboard in a new tab to see current changes.</p>
-          <div class="card-arrow">→</div>
-        </div>
-      </a>
-    </div>
-
-    <div class="section-header"><div class="section-title">Actions</div><div class="section-line"></div></div>
-    <div class="grid">
-      <a href="/admin/ninja-bucks-award" style="text-decoration: none; color: inherit;">
-        <div class="card">
-          <div class="card-top">
-            <div class="card-icon icon-blue"><i class="bi bi-plus-circle"></i></div>
-            <span class="card-badge badge-action">Quick</span>
-          </div>
-          <h3>Award Ninja Bucks</h3>
-          <p>Instantly award Ninja Bucks for achievements, level ups, or birthdays.</p>
-          <div class="card-arrow">→</div>
-        </div>
-      </a>
-      <div class="card opacity-75">
-        <div class="card-top">
-          <div class="card-icon icon-blue"><i class="bi bi-person-plus-fill"></i></div>
-          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
-        </div>
-        <h3>Add Ninja</h3>
-        <p>Register a new ninja and initialize their starting profile.</p>
-        <div class="card-arrow">→</div>
-      </div>
-      <div class="card opacity-75">
-        <div class="card-top">
-          <div class="card-icon icon-blue"><i class="bi bi-sliders"></i></div>
-          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
-        </div>
-        <h3>Buttons / Controls</h3>
-        <p>Quick-action macros to award NinjaBucks or trigger events.</p>
-        <div class="card-arrow">→</div>
-      </div>
-      <div class="card opacity-75">
-        <div class="card-top">
-          <div class="card-icon icon-blue"><i class="bi bi-graph-up-arrow"></i></div>
-          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
-        </div>
-        <h3>Update Progress</h3>
-        <p>Log belt tests, rank advancements, and curriculum milestones.</p>
-        <div class="card-arrow">→</div>
-      </div>
-    </div>
-
-    <div class="section-header"><div class="section-title">Database</div><div class="section-line"></div></div>
-    <div class="grid">
-      <div class="card opacity-75">
-        <div class="card-top">
-          <div class="card-icon icon-dark"><i class="bi bi-database-fill"></i></div>
-          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
-        </div>
-        <h3>Master Data</h3>
-        <p>All member stats, history, and metadata in one place.</p>
-        <div class="card-arrow">→</div>
-      </div>
-      <div class="card opacity-75">
-        <div class="card-top">
-          <div class="card-icon icon-dark"><i class="bi bi-grid-3x3-gap-fill"></i></div>
-          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
-        </div>
-        <h3>Progress Matrix</h3>
-        <p>Visual overview of all ninjas' current belt and degree status.</p>
-        <div class="card-arrow">→</div>
-      </div>
-      <a href="/ninjabucks" style="text-decoration: none; color: inherit;">
-        <div class="card">
-          <div class="card-top">
-            <div class="card-icon icon-dark"><i class="bi bi-journal-text"></i></div>
-            <span class="card-badge badge-data">Public</span>
-          </div>
-          <h3>Ninja Bucks</h3>
-          <p>View the full searchable/sortable Ninja Bucks leaderboard.</p>
-          <div class="card-arrow">→</div>
-        </div>
-      </a>
-      <a href="/belts" style="text-decoration: none; color: inherit;">
-        <div class="card">
-          <div class="card-top">
-            <div class="card-icon icon-dark"><i class="bi bi-trophy"></i></div>
-            <span class="card-badge badge-data">Public</span>
-          </div>
-          <h3>Belts Totem</h3>
-          <p>View the current progress of all ninjas across all belts and degrees.</p>
-          <div class="card-arrow">→</div>
-        </div>
-      </a>
-    </div>
-
-    <div class="section-header"><div class="section-title">Logs & Events</div><div class="section-line"></div></div>
-    <div class="grid">
-      <div class="card opacity-75">
-        <div class="card-top">
-          <div class="card-icon icon-amber"><i class="bi bi-clock-history"></i></div>
-          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
-        </div>
-        <h3>NB Log (Active)</h3>
-        <p>Real-time NinjaBucks transactions for today's session.</p>
-        <div class="card-arrow">→</div>
-      </div>
-      <div class="card opacity-75">
-        <div class="card-top">
-          <div class="card-icon icon-amber"><i class="bi bi-clipboard-pulse"></i></div>
-          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
-        </div>
-        <h3>Progress Log</h3>
-        <p>Timestamped history of all rank advancements and changes.</p>
-        <div class="card-arrow">→</div>
-      </div>
-      <div class="card opacity-75">
-        <div class="card-top">
-          <div class="card-icon icon-amber"><i class="bi bi-folder-fill"></i></div>
-          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
-        </div>
-        <h3>Archive Logs</h3>
-        <p>Historical transaction records for auditing past sessions.</p>
-        <div class="card-arrow">→</div>
-      </div>
-      <div class="card opacity-75">
-        <div class="card-top">
-          <div class="card-icon icon-teal"><i class="bi bi-trophy-fill"></i></div>
-          <span class="card-badge badge-secondary">NON-FUNCTIONAL</span>
-        </div>
-        <h3>Boss Battle</h3>
-        <p>Track boss HP, ninja damage dealt, and daily event stats.</p>
-        <div class="card-arrow">→</div>
-      </div>
-    </div>
-
-    <div class="boss-card opacity-50">
-      <div class="boss-header">
-        <span class="boss-title">Today's Boss Battle <span class="badge bg-secondary ms-2" style="font-size: 10px;">NON-FUNCTIONAL</span></span>
-        <span class="boss-live">● Live</span>
-      </div>
-      <div class="hp-label">Boss HP — 62% remaining</div>
-      <div class="hp-bar-bg"><div class="hp-bar"></div></div>
-      <div class="hp-text"><span>38% damage dealt by ninjas</span><span>Session active</span></div>
-    </div>
-  </main>
+  <!-- Settings -->
+  <div class="col-md-4">
+    <a href="/admin/dashboard-editor" class="nav-card">
+      <div class="icon-box ib-green"><i class="bi bi-pencil-square"></i></div>
+      <h3>Dashboard Editor</h3>
+      <p>Configure activities, NOTM, and lobby display.</p>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="/admin/shop-editor" class="nav-card">
+      <div class="icon-box ib-green"><i class="bi bi-cart4"></i></div>
+      <h3>Shop Management</h3>
+      <p>Edit items, prices, and stock in the Ninja Shop.</p>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="/admin/backups" class="nav-card">
+      <div class="icon-box ib-blue"><i class="bi bi-shield-lock-fill"></i></div>
+      <h3>Backups & Recovery</h3>
+      <p>Manage database snapshots and restore points.</p>
+    </a>
+  </div>
 </div>
 
 <script>
-  const d = new Date();
-  document.getElementById('date-badge').textContent = d.toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'});
+  async function migrateDatabase(wipe = false) {
+    const actionText = wipe ? 'WIPE all current data and re-import' : 'SYNC and update existing data';
+    if (!confirm(`Are you sure you want to ${actionText}? A backup will be created automatically.`)) return;
+    
+    try {
+      const response = await fetch('/admin/migrate-database', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wipe })
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        const modal = new bootstrap.Modal(document.getElementById('migrationModal'));
+        modal.show();
+        pollMigrationStatus();
+      } else {
+        alert('Failed to start migration: ' + result.error);
+      }
+    } catch (error) {
+      alert('Network Error starting migration.');
+    }
+  }
+
+  async function pollMigrationStatus() {
+    const bar = document.getElementById('migrationProgressBar');
+    const msg = document.getElementById('migrationStatusMsg');
+    
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch('/admin/migration-status');
+        const status = await response.json();
+        
+        bar.style.width = status.progress + '%';
+        msg.textContent = status.message;
+        
+        if (status.error) {
+          clearInterval(interval);
+          alert('Migration Error: ' + status.error);
+        } else if (!status.active && status.progress === 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            alert(`Migration Complete!\nNinjas: ${status.results?.ninjas || 0}\nLogs: ${status.results?.logs || 0}`);
+            location.reload();
+          }, 500);
+        }
+      } catch (e) { console.error('Polling error', e); }
+    }, 1000);
+  }
 </script>
-</body>
-</html>
+
+<div class="modal fade" id="migrationModal" data-bs-backdrop="static" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-body p-5">
+        <div class="text-center mb-4">
+          <div class="spinner-border text-primary mb-3" role="status"></div>
+          <h4 class="fw-bold">Updating Database</h4>
+          <p id="migrationStatusMsg" class="text-muted">Initializing migration engine...</p>
+        </div>
+        <div class="progress" style="height: 12px; border-radius: 10px; background: #eee;">
+          <div id="migrationProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 0%; border-radius: 10px;"></div>
+        </div>
+        <p class="text-muted small mt-4 text-center">Processing spreadsheets. Please wait...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/admin-footer') %>

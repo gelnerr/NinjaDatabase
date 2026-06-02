@@ -1,0 +1,121 @@
+<%- include('partials/admin-header', { title: 'Master Data', active: 'data' }) %>
+
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h2 class="page-title">Ninja Master Data</h2>
+    <p class="text-muted mb-0">Complete registry of all ninjas and their current status.</p>
+  </div>
+  <a href="/admin/add-ninja" class="btn btn-primary rounded-pill px-4 shadow-sm">
+    <i class="bi bi-person-plus-fill me-2"></i> Add New Ninja
+  </a>
+</div>
+
+<div class="admin-card overflow-hidden shadow-sm">
+  <div class="p-4 border-bottom bg-light d-flex justify-content-between align-items-center gap-3 flex-wrap">
+    <div class="input-group" style="max-width: 350px;">
+      <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="ninjaSearch" class="form-control border-start-0 ps-0" placeholder="Search ninjas by name..." onkeyup="filterTable()">
+    </div>
+    <div class="text-muted small fw-bold">
+      Showing <span id="visibleCount" class="text-primary"><%= ninjas.length %></span> of <%= ninjas.length %> Ninjas
+    </div>
+  </div>
+  
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" id="ninjaTable">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-4 py-3">Ninja Name</th>
+          <th class="py-3">Current Belt</th>
+          <th class="py-3">Total NinjaBucks</th>
+          <th class="py-3">Status</th>
+          <th class="text-end pe-4 py-3">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% ninjas.forEach(ninja => { %>
+          <tr>
+            <td class="ps-4 fw-bold text-dark"><%= ninja.name %></td>
+            <td>
+              <span class="badge belt-badge rounded-pill belt-<%= ninja.currentBelt.toLowerCase().replace(' ', '-') %> px-3 py-2">
+                <%= ninja.currentBelt %>
+              </span>
+            </td>
+            <td class="fw-bold text-primary">
+              <i class="bi bi-coin me-1"></i><%= ninja.totalNinjaBucks.toLocaleString() %>
+            </td>
+            <td>
+              <% if (ninja.isActive) { %>
+                <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2">Active</span>
+              <% } else { %>
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary border-opacity-25 px-2 text-uppercase" style="font-size: 0.7rem;">Inactive</span>
+              <% } %>
+            </td>
+            <td class="text-end pe-4">
+              <div class="btn-group shadow-sm rounded-pill overflow-hidden">
+                <button class="btn btn-sm btn-white border border-end-0" onclick="toggleActive('<%= ninja._id %>')" title="Toggle Status">
+                  <i class="bi <%= ninja.isActive ? 'bi-person-x' : 'bi-person-check' %> me-1"></i>
+                  <%= ninja.isActive ? 'Deactivate' : 'Activate' %>
+                </button>
+                <button class="btn btn-sm btn-outline-danger border" onclick="deleteNinja('<%= ninja._id %>')" title="Delete Record">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .btn-white { background: white; color: #445566; }
+  .btn-white:hover { background: #f8f9fa; }
+  .belt-badge { min-width: 100px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.1); }
+</style>
+
+<script>
+  function filterTable() {
+    const input = document.getElementById('ninjaSearch');
+    const filter = input.value.toUpperCase();
+    const table = document.getElementById('ninjaTable');
+    const tr = table.getElementsByTagName('tr');
+    let visible = 0;
+
+    for (let i = 1; i < tr.length; i++) {
+      const td = tr[i].getElementsByTagName('td')[0];
+      if (td) {
+        const textValue = td.textContent || td.innerText;
+        if (textValue.toUpperCase().indexOf(filter) > -1) {
+          tr[i].style.display = "";
+          visible++;
+        } else {
+          tr[i].style.display = "none";
+        }
+      }
+    }
+    document.getElementById('visibleCount').textContent = visible;
+  }
+
+  async function toggleActive(id) {
+    if(!confirm('Toggle active status for this ninja?')) return;
+    try {
+      const res = await fetch(`/admin/ninjas/${id}/toggle-active`, { method: 'POST' });
+      if (res.ok) location.reload();
+      else alert('Failed to update status.');
+    } catch (e) { alert('Network error.'); }
+  }
+  
+  async function deleteNinja(id) {
+    const confirmText = 'PERMANENTLY DELETE this ninja? Type DELETE to confirm.';
+    if (prompt(confirmText) !== 'DELETE') return;
+    try {
+      const res = await fetch(`/admin/ninjas/${id}/delete`, { method: 'POST' });
+      if (res.ok) location.reload();
+      else alert('Failed to delete ninja.');
+    } catch (e) { alert('Network error.'); }
+  }
+</script>
+
+<%- include('partials/admin-footer') %>

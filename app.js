@@ -8,721 +8,778 @@ const bcrypt = require('bcryptjs');
 const { google } = require('googleapis');
 const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
+const csv = require('csv-parser');
+
 const Dashboard = require('./models/Dashboard');
 const User = require('./models/User');
+const Ninja = require('./models/Ninja');
+const NBLog = require('./models/NBLog');
+const HallOfFame = require('./models/HallOfFame');
+const ProgressLog = require('./models/ProgressLog');
 
 const app = express();
 
-// Database Connection Helper (Lazy & Persistent)
+// Database Connection
 let cachedDb = null;
 const connectDB = async () => {
   if (cachedDb && mongoose.connection.readyState === 1) return cachedDb;
-  
   const MONGODB_URI = process.env.MONGODB_URI;
-  if (!MONGODB_URI) {
-    throw new Error('MONGODB_URI environment variable is missing!');
-  }
-
-  if (MONGODB_URI.includes('<password>')) {
-    throw new Error('MONGODB_URI still contains the <password> placeholder!');
-  }
-
-  console.log('Connecting to MongoDB...');
+  if (!MONGODB_URI) throw new Error('MONGODB_URI missing!');
   try {
-    cachedDb = await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
-      bufferCommands: false,
-    });
-    console.log('Connected to MongoDB!');
-    
-    // One-time migration logic
-    const userCount = await User.countDocuments();
-    const jsonPath = path.join(__dirname, 'data/users.json');
-    if (userCount === 0 && fs.existsSync(jsonPath)) {
-      console.log('Migrating users from users.json to MongoDB...');
-      const users = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-      await User.insertMany(users);
-    }
-    
+    cachedDb = await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000, bufferCommands: false });
+    console.log('MongoDB Connected');
     return cachedDb;
-  } catch (err) {
-    console.error('Mongoose Connect Error:', err.message);
-    throw err;
-  }
+  } catch (err) { console.error('DB Error:', err.message); throw err; }
 };
 
-// Middleware to ensure DB is connected
-app.use(async (req, res, next) => {
-  try {
-    await connectDB();
-    next();
-  } catch (err) {
-    console.error('DB Connection Middleware Error:', err.message);
-    res.status(500).send(`Database Connection Error: ${err.message}`);
-  }
-});
-
-// Middleware
+app.use(async (req, res, next) => { try { await connectDB(); next(); } catch (err) { res.status(500).send(err.message); } });
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
-
-// Serve bootstrap and bootstrap-icons from node_modules
 app.use('/css', express.static(path.join(__dirname, 'node_modules/bootstrap/dist/css')));
 app.use('/js', express.static(path.join(__dirname, 'node_modules/bootstrap/dist/js')));
 app.use('/icons', express.static(path.join(__dirname, 'node_modules/bootstrap-icons/font')));
 
-// Session setup with persistent MongoStore
-// We use a getter or a fallback to handle MongoStore initialization variants
-const mongoStoreInstance = (process.env.MONGODB_URI) ? MongoStore.create({
-  mongoUrl: process.env.MONGODB_URI,
-  ttl: 14 * 24 * 60 * 60,
-  autoRemove: 'native'
-}) : null;
-
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'ninja-secret-key-123',
-  resave: false,
-  saveUninitialized: false,
-  proxy: true,
-  store: mongoStoreInstance,
-  cookie: { 
-    maxAge: 1000 * 60 * 60 * 24,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax'
-  }
+  secret: process.env.SESSION_SECRET || 'ninja-secret',
+  resave: false, saveUninitialized: false,
+  store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
+  cookie: { maxAge: 1000 * 60 * 60 * 24 }
 }));
 
-// Set EJS
 app.set('view engine', 'ejs');
 app.set('views', path.join(process.cwd(), 'views'));
+const upload = multer({ dest: '/tmp' });
 
-// Multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, '/tmp');
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
-});
-const upload = multer({ storage: storage });
-
-// Database Helpers
+// HELPERS
 const getDashboardData = async () => {
-  let data = await Dashboard.findOne();
-  if (!data) {
-    data = await Dashboard.create({});
-  }
-  return data;
+  const d = (await Dashboard.findOne()) || (await Dashboard.create({}));
+  
+  // Calculate Boss Battle Leaderboards
+  const topDamagers = await NBLog.aggregate([
+    { $match: { damageDealt: { $gt: 0 } } },
+    { $group: { _id: "$ninjaName", totalDamage: { $sum: "$damageDealt" } } },
+    { $sort: { totalDamage: -1 } },
+    { $limit: 5 }
+  ]);
+
+  const topAttackers = await NBLog.aggregate([
+    { $match: { damageDealt: { $gt: 0 } } },
+    { $group: { _id: "$ninjaName", attackCount: { $sum: 1 } } },
+    { $sort: { attackCount: -1 } },
+    { $limit: 5 }
+  ]);
+
+  d.topDamagers = topDamagers.map(x => ({ name: x._id, value: x.totalDamage }));
+  d.topAttackers = topAttackers.map(x => ({ name: x._id, value: x.attackCount }));
+
+  return d;
+};
+const isAuthenticated = (req, res, next) => req.session.user ? next() : res.redirect('/login');
+
+const createDatabaseBackup = async () => {
+  const backupDir = path.join(__dirname, 'backups');
+  if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir);
+  
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupPath = path.join(backupDir, `db-backup-${timestamp}.json`);
+  
+  const data = {
+    ninjas: await Ninja.find({}),
+    logs: await NBLog.find({}),
+    progressLogs: await ProgressLog.find({}),
+    hallOfFame: await HallOfFame.find({}),
+    dashboard: await Dashboard.findOne()
+  };
+  
+  fs.writeFileSync(backupPath, JSON.stringify(data, null, 2));
+  return backupPath;
 };
 
-// Helper: Sync Google Sheets Data
-const syncGoogleSheets = async (data) => {
-  if (!data.spreadsheetId) return 0;
-
-  let authConfig = {
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+const sendDiscordNotification = async (ninjaName, oldBelt, newBelt, notes) => {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  if (!webhookUrl) {
+    console.warn('Discord Notification skipped: DISCORD_WEBHOOK_URL is missing in .env');
+    return false;
+  }
+  
+  const emojis = {
+    'White': '⚪', 'Yellow': '🟡', 'Orange': '🟠', 'Green': '🟢', 'Blue': '🔵', 
+    'Purple': '🟣', 'Brown': '🟤', 'Red': '🔴', 'Black': '⚫', 
+    'Bronze': '🥉', 'Silver': '🥈', 'Platinum': '💠', 'Gold': '🥇', 'Going Gold': '✨'
   };
 
-  const credPath = path.join(__dirname, 'credentials.json');
-  if (process.env.GOOGLE_CREDENTIALS) {
-    try {
-      const creds = process.env.GOOGLE_CREDENTIALS.trim();
-      if (creds.startsWith('{')) {
-        authConfig.credentials = JSON.parse(creds);
-      } else {
-        console.error('GOOGLE_CREDENTIALS environment variable is not valid JSON.');
-        return 0;
-      }
-    } catch (e) {
-      console.error('Error parsing GOOGLE_CREDENTIALS:', e.message);
-      return 0;
-    }
-  } else if (fs.existsSync(credPath)) {
-    authConfig.keyFilename = credPath;
-  } else {
-    console.error('No Google credentials found (environment variable or credentials.json).');
-    return 0;
-  }
+  const oldE = emojis[oldBelt] || '⚪';
+  const newE = emojis[newBelt] || '⚪';
+  
+  const message = `🥋 **Belt Advancement!**\n**${ninjaName}** has leveled up!\n\n${oldE} **${oldBelt}**  ➡️  ${newE} **${newBelt}**\n\n_${notes || 'Manual Update'}_`;
+  const data = JSON.stringify({ content: message });
+  const url = new URL(webhookUrl);
+  const https = require('https');
 
+  console.log(`Sending Discord notification for ${ninjaName}...`);
+
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: url.hostname,
+      path: url.pathname + url.search,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(data)
+      }
+    }, (res) => {
+      let body = '';
+      res.on('data', (chunk) => body += chunk);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          console.log(`Discord success for ${ninjaName}`);
+          resolve(true);
+        } else {
+          console.error(`Discord Error ${res.statusCode}:`, body);
+          resolve(false);
+        }
+      });
+    });
+    
+    req.on('error', (e) => {
+      console.error('Discord Network Error:', e.message);
+      resolve(false);
+    });
+    
+    req.write(data);
+    req.end();
+  });
+};
+
+// Shared Google Sheets auth — used by sync, push, and read helpers
+const getSheetClient = async () => {
+  const credPath = path.join(__dirname, 'credentials.json');
+  let authConfig = { scopes: ['https://www.googleapis.com/auth/spreadsheets'] };
+  if (process.env.GOOGLE_CREDENTIALS) authConfig.credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+  else if (fs.existsSync(credPath)) authConfig.keyFilename = credPath;
+  else return null;
   try {
     const auth = new google.auth.GoogleAuth(authConfig);
-    const sheets = google.sheets({ version: 'v4', auth });
-    
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: data.spreadsheetId,
-      range: data.spreadsheetRange || 'Ninja Bucks!A2:C150',
-    });
-
-    const rows = response.data.values;
-    if (!rows || rows.length === 0) return 0;
-
-    const fullData = rows
-      .filter(row => row.length >= 2)
-      .map(row => {
-        let name, total, monthly;
-        if (row.length >= 3) {
-          // If 3 columns: Name, Total, Monthly
-          name = row[0];
-          total = row[1];
-          monthly = row[2];
-        } else {
-          // If only 2 columns: Name, Total
-          name = row[0];
-          total = row[1];
-          monthly = 0;
-        }
-
-        if (!name || name.toLowerCase().trim() === 'ninja name') return null;
-
-        return {
-          name: name.trim(),
-          total: parseInt(total ? total.toString().replace(/,/g, '') : '0') || 0,
-          monthly: parseInt(monthly ? monthly.toString().replace(/,/g, '') : '0') || 0
-        };
-      })
-      .filter(n => n !== null);
-
-    data.leaderboard = fullData;
-
-    // --- Sync Monthly Top Earners ---
-    try {
-      const monthlyResponse = await sheets.spreadsheets.values.get({
-        spreadsheetId: data.spreadsheetId,
-        range: data.monthlyRange || 'Ninja Bucks!E2:F6',
-      });
-      const monthlyRows = monthlyResponse.data.values;
-      if (monthlyRows && monthlyRows.length > 0) {
-        data.monthlyLeaderboard = monthlyRows
-          .filter(row => row.length >= 2)
-          .map(row => ({
-            name: row[0].trim(),
-            monthly: parseInt(row[1] ? row[1].toString().replace(/,/g, '') : '0') || 0
-          }));
-      }
-    } catch (monthlyErr) {
-      console.error('Monthly Sync Error:', monthlyErr.message);
-    }
-
-    // --- Sync Belts Totem ---
-    try {
-      const beltsResponse = await sheets.spreadsheets.values.get({
-        spreadsheetId: data.spreadsheetId,
-        range: data.beltsTotemRange || 'Belts Totem!A1:R100',
-      });
-      const beltsRows = beltsResponse.data.values;
-      if (beltsRows && beltsRows.length >= 2) {
-        const beltNames = beltsRows[0];
-        const degreeNames = beltsRows[1];
-        const ninjaRows = beltsRows.slice(2);
-
-        const totem = [];
-        let currentBelt = null;
-        const maxCols = Math.max(beltNames.length, degreeNames.length);
-
-        for (let col = 0; col < maxCols; col++) {
-          if (beltNames[col] && beltNames[col].trim() !== '') {
-            currentBelt = {
-              name: beltNames[col].trim(),
-              degrees: []
-            };
-            totem.push(currentBelt);
-          }
-
-          if (currentBelt) {
-            const ninjas = [];
-            for (let r = 0; r < ninjaRows.length; r++) {
-              if (ninjaRows[r][col] && ninjaRows[r][col].trim() !== '') {
-                ninjas.push(ninjaRows[r][col].trim());
-              }
-            }
-            currentBelt.degrees.push({
-              name: degreeNames[col] ? degreeNames[col].trim() : '',
-              ninjas: ninjas
-            });
-          }
-        }
-        data.beltsTotemData = totem;
-      }
-    } catch (beltsErr) {
-      console.error('Belts Totem Sync Error:', beltsErr.message);
-    }
-
-    data.lastUpdated = new Date();
-    await data.save();
-    return fullData.length;
-  } catch (err) {
-    console.error('Google Sheets Sync Error:', err.message);
-    return 0;
-  }
+    return google.sheets({ version: 'v4', auth });
+  } catch(e) { return null; }
 };
 
-// --- ROUTES ---
-
-app.get('/ninjabucks', async (req, res) => {
-  try {
-    const data = await getDashboardData();
-    await syncGoogleSheets(data);
-    const updatedData = await getDashboardData();
-    res.render('ninjabucks', { 
-      leaderboard: updatedData.leaderboard || [],
-      monthlyLeaderboard: updatedData.monthlyLeaderboard || [],
-      theme: updatedData.theme || 'classic',
-      user: req.session.user
-    });
-  } catch (error) {
-    console.error('Ninjabucks page error:', error.message);
-    res.status(500).send(`Internal Error: ${error.message}`);
-  }
+// Date string matching the Apps Script format: "January 15, 2025"
+const sheetDate = () => new Date().toLocaleDateString('en-US', {
+  month: 'long', day: '2-digit', year: 'numeric', timeZone: 'America/Regina'
 });
 
-app.get('/shop', async (req, res) => {
-  try {
-    const data = await getDashboardData();
-    // Only sync leaderboard if needed, shop is now manual
-    await syncGoogleSheets(data);
-    const updatedData = await getDashboardData();
-    res.render('shop', { 
-      shopItems: updatedData.shopItems || [],
-      user: req.session.user
-    });
-  } catch (error) {
-    console.error('Shop page error:', error.message);
-    res.status(500).send(`Internal Error: ${error.message}`);
-  }
-});
+// Find a ninja's 1-indexed row in a sheet column
+const findSheetRow = async (sheets, spreadsheetId, sheetName, col, name) => {
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range: `${sheetName}!${col}:${col}` });
+  const rows = res.data.values || [];
+  const idx = rows.findIndex(r => r[0]?.trim().toLowerCase() === name.toLowerCase());
+  return idx === -1 ? null : idx + 1;
+};
 
-app.get('/belts', async (req, res) => {
+// Push an NB transaction to the NB Log sheet and update the ninja's total in the data sheet
+const pushNBToSheets = async (ninjaName, amount, reason, newTotal) => {
   try {
-    const data = await getDashboardData();
-    await syncGoogleSheets(data);
-    const updatedData = await getDashboardData();
-    res.render('belts', { 
-      totem: updatedData.beltsTotemData || [],
-      user: req.session.user
-    });
-  } catch (error) {
-    console.error('Belts page error:', error.message);
-    res.status(500).send(`Internal Error: ${error.message}`);
-  }
-});
+    const d = await getDashboardData();
+    if (!d?.spreadsheetId) return;
+    const sheets = await getSheetClient();
+    if (!sheets) return;
+    const sid = d.spreadsheetId;
 
-app.get('/notm-archive', async (req, res) => {
-  try {
-    const data = await getDashboardData();
-    res.render('notm-archive', { 
-      archive: data.notmArchive || [],
-      user: req.session.user
+    // Append log row to NB Log (rows 9+ are the actual log entries)
+    const amtStr = amount >= 0 ? `+${amount}` : `${amount}`;
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: sid,
+      range: 'NB Log!A9:D',
+      valueInputOption: 'RAW',
+      insertDataOption: 'INSERT_ROWS',
+      resource: { values: [[sheetDate(), ninjaName, reason, amtStr]] }
     });
-  } catch (error) {
-    res.status(500).send(`Internal Error: ${error.message}`);
+
+    // Update running total in data sheet column F
+    const row = await findSheetRow(sheets, sid, 'data', 'A', ninjaName);
+    if (row) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: sid, range: `data!F${row}`,
+        valueInputOption: 'RAW', resource: { values: [[newTotal]] }
+      });
+    }
+    console.log(`[Sheets] NB sync: ${ninjaName} ${amtStr} → total ${newTotal}`);
+  } catch(e) { console.error('[Sheets] pushNBToSheets error:', e.message); }
+};
+
+// Push a belt advancement to the Progress Log sheet and update the belt in the Progress sheet
+const pushBeltToSheets = async (ninjaName, oldBelt, newBelt, notes) => {
+  try {
+    const d = await getDashboardData();
+    if (!d?.spreadsheetId) return;
+    const sheets = await getSheetClient();
+    if (!sheets) return;
+    const sid = d.spreadsheetId;
+
+    // Apps Script uses Unity section (cols G-K) for Purple+, Degrees (cols A-E) for White-Blue
+    const UNITY_BELTS = new Set(['Purple', 'Brown', 'Red', 'Black', 'Bronze', 'Silver', 'Platinum', 'Gold', 'Going Gold']);
+    const isUnity = UNITY_BELTS.has(newBelt);
+    const beltStr = `${oldBelt} -> ${newBelt}`;
+    const notesStr = notes || 'Website Update';
+    const dateStr = sheetDate();
+
+    if (isUnity) {
+      const gRes = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Progress Log!G:G' });
+      const nextRow = Math.max(3, (gRes.data.values || []).length + 1);
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: sid, range: `Progress Log!G${nextRow}:K${nextRow}`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [[dateStr, ninjaName, beltStr, notesStr, false]] }
+      });
+    } else {
+      const aRes = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Progress Log!A:A' });
+      const nextRow = Math.max(3, (aRes.data.values || []).length + 1);
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: sid, range: `Progress Log!A${nextRow}:E${nextRow}`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [[dateStr, ninjaName, beltStr, notesStr, false]] }
+      });
+    }
+
+    // Update current belt in Progress sheet column B
+    const progRow = await findSheetRow(sheets, sid, 'Progress', 'A', ninjaName);
+    if (progRow) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: sid, range: `Progress!B${progRow}`,
+        valueInputOption: 'RAW', resource: { values: [[newBelt]] }
+      });
+    }
+    console.log(`[Sheets] Belt sync: ${ninjaName} → ${newBelt}`);
+  } catch(e) { console.error('[Sheets] pushBeltToSheets error:', e.message); }
+};
+
+const syncGoogleSheets = async (data) => {
+  if (!data.spreadsheetId) return 0;
+  const sheets = await getSheetClient();
+  if (!sheets) return 0;
+  try {
+    const response = await sheets.spreadsheets.values.get({ spreadsheetId: data.spreadsheetId, range: data.spreadsheetRange || 'Ninja Bucks!A2:C150' });
+    const rows = response.data.values; if (!rows) return 0;
+    data.leaderboard = rows.filter(r => r[0]).map(r => ({ name: r[0].trim(), total: parseInt(r[1]?.toString().replace(/,/g,''))||0, monthly: parseInt(r[2]?.toString().replace(/,/g,''))||0 }));
+    await data.save(); return data.leaderboard.length;
+  } catch (e) { console.error('Sync Error:', e.message); return 0; }
+};
+
+const BELTS = ['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black', 'Bronze', 'Silver', 'Platinum', 'Gold', 'Going Gold'];
+
+const getNewBelt = (oldBelt, degree) => {
+  const b = oldBelt?.trim();
+  const d = degree?.trim();
+  
+  if (b === 'White') {
+    if (d === 'Second Degree') return 'Yellow';
+    return 'White';
   }
-});
+  if (b === 'Yellow') {
+    if (d === 'Second Degree' || d === 'Third Degree') return 'Green';
+    return 'Orange';
+  }
+  if (b === 'Orange') {
+    if (d === 'Second Degree' || d === 'Third Degree') return 'Purple';
+    return 'Blue';
+  }
+  if (b === 'Green') return 'Brown';
+  if (b === 'Blue') {
+    if (d === 'Third Degree') return 'Black';
+    return 'Red';
+  }
+  if (b === 'Purple') return 'Bronze';
+  if (b === 'Brown') return 'Silver';
+  if (b === 'Red') return 'Platinum';
+  if (b === 'Black') return 'Gold';
+  if (b === 'Finished Black Belt') return 'Going Gold';
+  
+  return b || 'White';
+};
 
 app.get('/', async (req, res) => {
-  try {
-    const data = await getDashboardData();
-    res.render('dashboard', data);
-  } catch (error) {
-    res.status(500).send(`Internal Error: ${error.message}`);
-  }
+  const data = await getDashboardData();
+  if (req.query.theme) data.theme = req.query.theme;
+  res.render('dashboard', data);
+});
+app.get('/ninjabucks', async (req, res) => {
+  const data = await getDashboardData(); await syncGoogleSheets(data);
+  res.render('ninjabucks', { leaderboard: data.leaderboard || [], monthlyLeaderboard: data.monthlyLeaderboard || [], theme: data.theme, user: req.session.user });
+});
+app.get('/shop', async (req, res) => {
+  const data = await getDashboardData();
+  res.render('shop', { shopItems: data.shopItems, theme: data.theme, user: req.session.user });
+});
+app.get('/belts', async (req, res) => {
+  const data = await getDashboardData();
+  const ninjas = await Ninja.find({ isActive: true }).sort({ name: 1 });
+  const theme = req.query.theme || data.theme;
+  res.render('belts', { ninjas, theme, user: req.session.user });
+});
+app.get('/notm-archive', async (req, res) => {
+  const data = await getDashboardData();
+  res.render('notm-archive', { archive: data.notmArchive, theme: data.theme, user: req.session.user });
 });
 
-// Auth Middleware
-const isAuthenticated = (req, res, next) => {
-  if (req.session.user) return next();
-  res.redirect('/login');
-};
+// AUTH
+app.get('/login', (req, res) => res.render('login', { error: null }));
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+  const user = await User.findOne({ username });
+  if (user && bcrypt.compareSync(password, user.passwordHash)) { req.session.user = { username: user.username, role: user.role }; return res.redirect('/admin'); }
+  res.render('login', { error: 'Invalid creds' });
+});
+app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
 
-// Emergency Setup Route
+// ADMIN CORE
+app.get('/admin', isAuthenticated, async (req, res) => {
+  res.render('admin', { data: await getDashboardData() });
+});
 app.get('/admin/setup', async (req, res) => {
-  try {
-    const { username, password } = req.query;
-    const targetUser = username || 'sensei';
-    const targetPass = password || 'password123';
-    
-    const hashedPassword = bcrypt.hashSync(targetPass, 10);
-    
-    await User.findOneAndUpdate(
-      { username: targetUser },
-      { passwordHash: hashedPassword, role: 'admin' },
-      { upsert: true, new: true }
-    );
-
-    let message = `User '${targetUser}' is ready. `;
-
-    const dashboardCount = await Dashboard.countDocuments();
-    if (dashboardCount === 0) {
-      await Dashboard.create({ theme: 'classic' });
-      message += "Default dashboard initialized. ";
-    }
-    
-    res.send(`<h3>Setup Successful</h3><p>${message}</p><a href='/login'>Go to Login</a>`);
-  } catch (error) {
-    res.status(500).send("Setup failed: " + error.message);
-  }
+  const { username, password } = req.query;
+  const hash = bcrypt.hashSync(password || 'password123', 10);
+  await User.findOneAndUpdate({ username: username || 'sensei' }, { passwordHash: hash, role: 'admin' }, { upsert: true });
+  res.send('Admin ready');
 });
 
-app.post('/admin/sync-leaderboard', isAuthenticated, async (req, res) => {
+// ADMIN ACTIONS
+app.get('/admin/add-ninja', isAuthenticated, (req, res) => res.render('add-ninja'));
+app.post('/admin/add-ninja', isAuthenticated, async (req, res) => {
+  await Ninja.create({ name: req.body.name.trim(), currentBelt: req.body.currentBelt, totalNinjaBucks: req.body.totalNinjaBucks });
+  res.redirect('/admin');
+});
+
+app.get('/admin/buttons', isAuthenticated, async (req, res) => {
+  const ninjas = await Ninja.find({ isActive: true }).sort({ name: 1 });
+  res.render('buttons', { ninjas });
+});
+
+app.get('/admin/update-progress', isAuthenticated, async (req, res) => res.render('update-progress', { ninjas: await Ninja.find({ isActive: true }).sort({ name: 1 }) }));
+app.post('/admin/ninjas/:id/update-belt', isAuthenticated, async (req, res) => {
+  const n = await Ninja.findById(req.params.id);
+  const old = n.currentBelt; 
+  n.currentBelt = req.body.currentBelt; 
+  await n.save();
+  
+  if (old !== n.currentBelt) {
+    const notes = req.body.notes || 'Manual Update';
+    await ProgressLog.create({
+      ninjaName: n.name, oldBelt: old, newBelt: n.currentBelt, notes, discordPosted: true
+    });
+    await sendDiscordNotification(n.name, old, n.currentBelt, notes);
+    // Fire-and-forget: sync belt change to Google Sheets
+    pushBeltToSheets(n.name, old, n.currentBelt, notes).catch(() => {});
+  }
+  res.json({ success: true });
+});
+
+app.get('/admin/nb-log', isAuthenticated, async (req, res) => res.render('nb-log', { logs: await NBLog.find({ isArchived: req.query.archived === 'true' }).sort({ date: -1 }).limit(100), archived: req.query.archived === 'true' }));
+app.post('/admin/archive-logs', isAuthenticated, async (req, res) => { await NBLog.updateMany({ isArchived: false }, { isArchived: true }); res.json({ success: true }); });
+
+app.get('/admin/inactive', isAuthenticated, async (req, res) => res.render('inactive', { ninjas: await Ninja.find({ isActive: false }).sort({ name: 1 }) }));
+app.post('/admin/ninjas/:id/toggle-active', isAuthenticated, async (req, res) => {
+  const n = await Ninja.findById(req.params.id); n.isActive = !n.isActive; await n.save();
+  res.json({ success: true });
+});
+
+app.get('/admin/boss-battle', isAuthenticated, async (req, res) => res.render('boss-battle', { data: await getDashboardData() }));
+app.post('/admin/boss-battle/update', isAuthenticated, async (req, res) => {
+  const d = await getDashboardData();
+  d.bossHP = req.body.bossHP; 
+  d.bossMaxHP = req.body.bossMaxHP; 
+  d.bossName = req.body.bossName; 
+  d.bossImage = req.body.bossImage || '/img/cn_logo.png';
+  d.bossActive = req.body.bossActive === 'on';
+  d.backgroundImage = req.body.backgroundImage || d.backgroundImage;
+  await d.save(); res.redirect('/admin/boss-battle');
+});
+
+app.get('/admin/backups', isAuthenticated, async (req, res) => {
+  const backupDir = path.join(__dirname, 'backups');
+  if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir);
+  const files = fs.readdirSync(backupDir).filter(f => f.endsWith('.json')).sort().reverse();
+  res.render('backups', { backups: files });
+});
+
+app.post('/admin/backups/restore', isAuthenticated, async (req, res) => {
   try {
-    const data = await getDashboardData();
-    const count = await syncGoogleSheets(data);
-    res.json({ success: true, count });
+    const { filename } = req.body;
+    const backupPath = path.join(__dirname, 'backups', filename);
+    if (!fs.existsSync(backupPath)) return res.status(404).json({ error: 'Backup not found' });
+    
+    const data = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
+    
+    // Safety: Backup current state before restoring an old one
+    await createDatabaseBackup();
+    
+    await Ninja.deleteMany({});
+    await NBLog.deleteMany({});
+    await ProgressLog.deleteMany({});
+    await HallOfFame.deleteMany({});
+    
+    if (data.ninjas) await Ninja.insertMany(data.ninjas);
+    if (data.logs) await NBLog.insertMany(data.logs);
+    if (data.progressLogs) await ProgressLog.insertMany(data.progressLogs);
+    if (data.hallOfFame) await HallOfFame.insertMany(data.hallOfFame);
+    if (data.dashboard) await Dashboard.findOneAndUpdate({}, data.dashboard, { upsert: true });
+    
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.get('/admin', isAuthenticated, (req, res) => {
-  res.render('admin');
-});
-
-app.get('/admin/notm-archive-editor', isAuthenticated, async (req, res) => {
-  const data = await getDashboardData();
-  res.render('notm-archive-editor', { archive: data.notmArchive || [] });
-});
-
-app.post('/admin/update-notm-archive', isAuthenticated, async (req, res) => {
+app.post('/admin/backups/rename', isAuthenticated, async (req, res) => {
   try {
-    const data = await getDashboardData();
-    const body = req.body;
+    const { oldFilename, newFilename } = req.body;
+    const oldPath = path.join(__dirname, 'backups', oldFilename);
+    let targetName = newFilename.endsWith('.json') ? newFilename : newFilename + '.json';
+    const newPath = path.join(__dirname, 'backups', targetName);
     
-    // Process the archive entries
-    const updatedArchive = [];
-    let m = 0;
+    if (!fs.existsSync(oldPath)) return res.status(404).json({ error: 'Backup not found' });
+    if (fs.existsSync(newPath)) return res.status(400).json({ error: 'Name already exists' });
     
-    // We need to find how many archive entries were sent
-    // The keys are like archive_month_0, archive_month_1...
-    while (body[`archive_month_${m}`] !== undefined) {
-      // If marked for deletion, skip adding it to the new array
-      if (body[`archive_delete_${m}`] === 'true') {
-        m++;
-        continue;
-      }
+    // Copy then delete is often more stable on synced drives like OneDrive
+    fs.copyFileSync(oldPath, newPath);
+    
+    // Tiny delay before deleting the old one to let OneDrive catch up
+    setTimeout(() => {
+      try { fs.unlinkSync(oldPath); } catch(e) {}
+    }, 500);
 
-      const entryId = body[`archive_id_${m}`];
-      const originalEntry = data.notmArchive.id(entryId);
-      
-      const updatedEntry = {
-        _id: entryId,
-        month: body[`archive_month_${m}`],
-        color: body[`archive_color_${m}`],
-        dateArchived: originalEntry ? originalEntry.dateArchived : new Date(),
-        ninjas: []
-      };
-
-      // Process ninjas for this month
-      let n = 0;
-      while (body[`archive_ninja_name_${m}_${n}`] !== undefined) {
-        updatedEntry.ninjas.push({
-          name: body[`archive_ninja_name_${m}_${n}`],
-          type: body[`archive_ninja_type_${m}_${n}`],
-          image: `/img/notm/${body[`archive_ninja_type_${m}_${n}`]}.png`
-        });
-        n++;
-      }
-      
-      updatedArchive.push(updatedEntry);
-      m++;
-    }
-
-    data.notmArchive = updatedArchive;
-    await data.save();
-    res.redirect('/admin/notm-archive-editor');
+    res.json({ success: true });
   } catch (error) {
-    console.error('Update NOTM Archive error:', error);
-    res.status(500).send(`Error updating archive: ${error.message}`);
+    res.status(500).json({ error: error.message });
   }
 });
 
-app.get('/admin/dashboard-editor', isAuthenticated, async (req, res) => {
-  const data = await getDashboardData();
-  res.render('dashboard-editor', { data });
+app.post('/admin/backups/delete', isAuthenticated, async (req, res) => {
+  try {
+    const { filename } = req.body;
+    const backupPath = path.join(__dirname, 'backups', filename);
+    if (!fs.existsSync(backupPath)) return res.status(404).json({ error: 'Backup not found' });
+    
+    fs.unlinkSync(backupPath);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.get('/admin/ninjabucks-editor', isAuthenticated, async (req, res) => {
-  const data = await getDashboardData();
-  res.render('ninjabucks-editor', { data });
+// Global status for background migration
+let migrationStatus = { active: false, progress: 0, message: 'Ready', results: null, error: null };
+
+app.get('/admin/migration-status', isAuthenticated, (req, res) => {
+  res.json(migrationStatus);
 });
 
+app.post('/admin/migrate-database', isAuthenticated, async (req, res) => {
+  if (migrationStatus.active) return res.status(400).json({ error: 'Migration already in progress.' });
+
+  const wipe = req.body.wipe === true;
+  migrationStatus = { active: true, progress: 0, message: 'Initializing...', results: null, error: null };
+  res.json({ success: true, started: true });
+
+  (async () => {
+    try {
+      migrationStatus.message = 'Creating safety backup...';
+      const backupFile = await createDatabaseBackup();
+
+      if (wipe) {
+        migrationStatus.message = 'Clearing existing data...';
+        await Ninja.deleteMany({});
+        await NBLog.deleteMany({});
+        await ProgressLog.deleteMany({});
+        await HallOfFame.deleteMany({});
+      }
+
+      const parse = (p) => new Promise(res => { 
+        const r=[]; if(!fs.existsSync(p)) return res([]); 
+        fs.createReadStream(p).pipe(csv({ headers: false })).on('data',d=>r.push(d)).on('end',()=>res(r)); 
+      });
+
+      const ninjaRowsRaw = await parse(path.join(__dirname, 'sheets/Ninja Database 2026 - data.csv'));
+      const progRowsRaw = await parse(path.join(__dirname, 'sheets/Ninja Database 2026 - Progress.csv'));
+      
+      const ninjaRows = ninjaRowsRaw.slice(1); 
+      const progRows = progRowsRaw.slice(1); 
+
+      migrationStatus.message = 'Migrating Ninjas...';
+      if (ninjaRows.length > 0) {
+        const ninjaOps = ninjaRows.map(n => {
+          const name = n[0]?.trim();
+          if (!name || name === 'Ninjas' || name === 'Leaderboard' || name.length > 30) return null;
+          
+          const pRow = progRows.find(pr => pr[0]?.trim() === name);
+          let beltValue = 'White';
+          if (pRow) {
+            const oldBelt = pRow[1]?.trim() || 'White';
+            
+            // Logic: Determine current rank based on the first FALSE degree column
+            const isT = (idx) => pRow[idx]?.trim().toUpperCase() === 'TRUE';
+
+            if (oldBelt === 'White') {
+              if (isT(2)) beltValue = 'Yellow';
+              else beltValue = 'White';
+            } else if (oldBelt === 'Yellow') {
+              if (isT(4)) beltValue = 'Green';
+              else beltValue = 'Orange';
+            } else if (oldBelt === 'Orange') {
+              if (isT(8)) beltValue = 'Purple';
+              else beltValue = 'Blue';
+            } else if (oldBelt === 'Green') {
+              beltValue = 'Brown';
+            } else if (oldBelt === 'Blue') {
+              if (isT(14)) beltValue = 'Black';
+              else beltValue = 'Red';
+            } else if (oldBelt === 'Purple') {
+              beltValue = 'Bronze';
+            } else if (oldBelt === 'Brown') {
+              beltValue = 'Silver';
+            } else if (oldBelt === 'Red') {
+              beltValue = 'Platinum';
+            } else if (oldBelt === 'Black') {
+              beltValue = 'Gold';
+            } else if (oldBelt === 'Finished Black Belt') {
+               beltValue = 'Going Gold';
+            }
+          }
+
+          return {
+            updateOne: {
+              filter: { name },
+              update: { 
+                totalNinjaBucks: parseInt(n[1]?.toString().replace(/,/g,'')) || 0,
+                currentBelt: beltValue,
+                isActive: true 
+              },
+              upsert: true
+            }
+          };
+        }).filter(Boolean);
+        if (ninjaOps.length > 0) await Ninja.bulkWrite(ninjaOps);
+      }
+      migrationStatus.progress = 30;
+
+      const migrateLogs = async (filename, isArchived, startProgress, endProgress) => {
+        const rows = await parse(path.join(__dirname, 'sheets', filename));
+        if (rows.length === 0) return 0;
+        
+        let headerRowFound = false;
+        const logs = rows.map((r, idx) => {
+          let name, action, amount, date;
+          const isMainLog = /NB Log\.csv$/i.test(filename);
+
+          if (isMainLog) {
+            if (r[0] === 'Date' || r[1] === 'Ninja') { headerRowFound = true; return null; }
+            if (!headerRowFound) {
+              name = r[0]; amount = parseInt(r[1]) || 0; action = 'Monthly Award'; date = new Date();
+            } else {
+              date = r[0] ? new Date(r[0]) : new Date(); name = r[1]; action = r[2] || 'Session Award'; amount = parseInt(r[3]?.toString().replace(/[+ ]/g,'')) || 0;
+            }
+          } else {
+            if (idx === 0) return null; 
+            name = r[1]; action = r[2] || 'Legacy'; amount = parseInt(r[3]?.toString().replace(/[+ ]/g,'')) || 0; date = r[0] ? new Date(r[0]) : new Date();
+          }
+
+          if (!name || name === 'Leaderboard' || name === 'Ninja' || name === 'Date' || name.length > 30) return null;
+          if (name.toUpperCase() === 'TRUE' || name.toUpperCase() === 'FALSE') return null;
+          return { ninjaName: name.trim(), buttonAction: action, amount: amount, date: isNaN(date.getTime()) ? new Date() : date, isArchived };
+        }).filter(Boolean);
+
+        if (logs.length > 0) {
+          for (let i = 0; i < logs.length; i += 500) {
+            await NBLog.insertMany(logs.slice(i, i + 500));
+            migrationStatus.progress = startProgress + Math.floor((i / logs.length) * (endProgress - startProgress));
+          }
+        }
+        return logs.length;
+      };
+
+      const activeCount = await migrateLogs('Ninja Database 2026 - NB Log.csv', false, 30, 50);
+      const oldCount = await migrateLogs('Ninja Database 2026 - Old NB Logs.csv', true, 50, 80);
+      
+      // 3. Migrate Progress Log
+      migrationStatus.message = 'Migrating Progress Log...';
+      const progLogRows = await parse(path.join(__dirname, 'sheets/Ninja Database 2026 - Progress Log.csv'));
+      if (progLogRows.length > 0) {
+        const pLogs = [];
+        for (let i = 2; i < progLogRows.length; i++) {
+          const r = progLogRows[i];
+          const parseSet = (dateIdx, nameIdx, beltIdx) => {
+            const dateStr = r[dateIdx];
+            const name = r[nameIdx]?.trim();
+            if (!dateStr || !name || name.toUpperCase() === 'TRUE' || name.toUpperCase() === 'FALSE' || name.startsWith('Post to')) return null;
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return null;
+            
+            const beltInfo = r[beltIdx] || '';
+            const degreeInfo = r[beltIdx + 1] || 'First Degree';
+            const parts = beltInfo.split('->');
+            
+            const rawOld = parts[0].trim();
+            const rawNew = parts.length > 1 ? parts[1].trim() : parts[0].trim();
+
+            return {
+              ninjaName: name,
+              oldBelt: getNewBelt(rawOld, ''),
+              newBelt: getNewBelt(rawNew, degreeInfo),
+              notes: degreeInfo,
+              date: date,
+              isArchived: true,
+              discordPosted: r[beltIdx + 2]?.trim().toUpperCase() === 'TRUE',
+              rowNumber: i + 1
+            };
+          };
+          const log1 = parseSet(0, 1, 2); if (log1) pLogs.push(log1);
+          const log2 = parseSet(6, 7, 8); if (log2) pLogs.push(log2);
+        }
+        if (pLogs.length > 0) await ProgressLog.insertMany(pLogs);
+      }
+      migrationStatus.progress = 100;
+      migrationStatus.active = false;
+      migrationStatus.message = 'Migration Complete!';
+      migrationStatus.results = { ninjas: ninjaRows.length, logs: activeCount + oldCount };
+      console.log('Migration background task finished.');
+
+    } catch (err) {
+      console.error('Background Migration Error:', err);
+      migrationStatus.active = false;
+      migrationStatus.error = err.message;
+    }
+  })();
+});
+
+// DASHBOARD EDITORS
+app.get('/admin/dashboard-editor', isAuthenticated, async (req, res) => res.render('dashboard-editor', { data: await getDashboardData() }));
+app.post('/admin/update-dashboard', isAuthenticated, upload.any(), async (req, res) => {
+  const d = await getDashboardData(); const b = req.body;
+  const procList = (prefix, fields) => {
+    const list = [];
+    Object.keys(b).filter(k => k.startsWith(`${prefix}_${fields[0]}_`)).forEach(k => {
+      const id = k.split('_').pop();
+      const obj = {};
+      fields.forEach(f => obj[f] = b[`${prefix}_${f}_${id}`]);
+      list.push(obj);
+    });
+    return list;
+  };
+  d.activitiesThisWeek = procList('activitiesThisWeek', ['desc', 'url', 'link']).map(a => ({ description: a.desc, image: a.url, link: a.link }));
+  d.activitiesNextWeek = procList('activitiesNextWeek', ['desc', 'url', 'link']).map(a => ({ description: a.desc, image: a.url, link: a.link }));
+  d.ninjasOfTheMonth = procList('notm', ['name', 'type', 'image']);
+  d.notmMonth = b.notmMonth; d.notmColor = b.notmColor; d.funFact = b.funFact; d.senseiOfMonth = b.senseiOfMonth;
+  d.theme = b.theme; d.senseiVotingLink = b.senseiVotingLink;
+  d.backgroundImage = b.backgroundImage || '';
+  await d.save(); res.redirect('/admin/dashboard-editor');
+});
+
+app.get('/admin/ninjabucks-editor', isAuthenticated, async (req, res) => res.render('ninjabucks-editor', { data: await getDashboardData() }));
 app.post('/admin/update-ninjabucks-config', isAuthenticated, async (req, res) => {
-  const data = await getDashboardData();
-  const { spreadsheetId, spreadsheetRange, monthlyRange, shopRange, beltsTotemRange, logRange } = req.body;
-  data.spreadsheetId = spreadsheetId || data.spreadsheetId;
-  data.spreadsheetRange = spreadsheetRange || data.spreadsheetRange;
-  data.monthlyRange = monthlyRange || data.monthlyRange;
-  data.shopRange = shopRange || data.shopRange;
-  data.beltsTotemRange = beltsTotemRange || data.beltsTotemRange;
-  data.logRange = logRange || data.logRange;
-  await data.save();
+  const d = await getDashboardData(); d.spreadsheetId = req.body.spreadsheetId; d.spreadsheetRange = req.body.spreadsheetRange; await d.save();
   res.redirect('/admin/ninjabucks-editor');
 });
 
-app.get('/admin/shop-editor', isAuthenticated, async (req, res) => {
-  const data = await getDashboardData();
-  res.render('shop-editor', { data });
-});
-
+app.get('/admin/shop-editor', isAuthenticated, async (req, res) => res.render('shop-editor', { data: await getDashboardData() }));
 app.post('/admin/update-shop', isAuthenticated, async (req, res) => {
-  const data = await getDashboardData();
-  const body = req.body;
-  
-  const shopItems = [];
-  let k = 0;
-  while (body[`shop_name_${k}`] !== undefined) {
-    shopItems.push({
-      name: body[`shop_name_${k}`],
-      price: parseInt(body[`shop_price_${k}`]) || 0,
-      category: body[`shop_category_${k}`] || 'General',
-      outOfStock: body[`shop_outOfStock_${k}`] === 'on',
-      image: body[`shop_image_${k}`] || 'bi-box-seam'
-    });
-    k++;
-  }
-  data.shopItems = shopItems;
-  await data.save();
-  res.redirect('/admin/shop-editor');
+  const d = await getDashboardData(); const b = req.body; const s=[]; let k=0;
+  while(b[`shop_name_${k}`]!==undefined){ s.push({ name: b[`shop_name_${k}`], price: parseInt(b[`shop_price_${k}`])||0, category: b[`shop_category_${k}`], outOfStock: b[`shop_outOfStock_${k}`]==='on', image: b[`shop_image_${k}`]||'bi-box-seam' }); k++; }
+  d.shopItems = s; await d.save(); res.redirect('/admin/shop-editor');
 });
 
-app.post('/admin/update-dashboard', isAuthenticated, upload.any(), async (req, res) => {
-  const data = await getDashboardData();
-  const body = req.body;
-  
-  const activitiesThisWeek = [];
-  let i = 0;
-  while (body[`activitiesThisWeek_desc_${i}`] !== undefined) {
-    const act = {
-      description: body[`activitiesThisWeek_desc_${i}`],
-      link: body[`activitiesThisWeek_link_${i}`],
-      image: data.activitiesThisWeek[i] ? data.activitiesThisWeek[i].image : "/img/cn_logo.png"
-    };
-    if (body[`activitiesThisWeek_url_${i}`]) act.image = body[`activitiesThisWeek_url_${i}`];
-    activitiesThisWeek.push(act);
-    i++;
-  }
-  data.activitiesThisWeek = activitiesThisWeek;
-
-  const activitiesNextWeek = [];
-  let j = 0;
-  while (body[`activitiesNextWeek_desc_${j}`] !== undefined) {
-    const act = {
-      description: body[`activitiesNextWeek_desc_${j}`],
-      link: body[`activitiesNextWeek_link_${j}`],
-      image: data.activitiesNextWeek[j] ? data.activitiesNextWeek[j].image : "/img/cn_logo.png"
-    };
-    if (body[`activitiesNextWeek_url_${j}`]) act.image = body[`activitiesNextWeek_url_${j}`];
-    activitiesNextWeek.push(act);
-    j++;
-  }
-  data.activitiesNextWeek = activitiesNextWeek;
-
-  const specialEvents = [];
-  let l = 0;
-  while (body[`specialEvents_date_${l}`] !== undefined) {
-    specialEvents.push({
-      date: body[`specialEvents_date_${l}`],
-      text: body[`specialEvents_text_${l}`]
-    });
-    l++;
-  }
-  data.specialEvents = specialEvents;
-
-  data.notmMonth = body.notmMonth || data.notmMonth;
-  data.notmColor = body.notmColor || data.notmColor;
-  
-  const ninjasOfTheMonth = [];
-  let k = 0;
-  while (body[`notm_name_${k}`] !== undefined) {
-    ninjasOfTheMonth.push({
-      name: body[`notm_name_${k}`],
-      type: body[`notm_type_${k}`],
-      image: `/img/notm/${body[`notm_type_${k}`]}.png`
-    });
-    k++;
-  }
-  data.ninjasOfTheMonth = ninjasOfTheMonth;
-
-  data.theme = body.theme || data.theme;
-  data.funFact = body.funFact || data.funFact;
-  data.senseiOfMonth = body.senseiOfMonth || data.senseiOfMonth;
-  data.senseiVotingLink = body.senseiVotingLink || data.senseiVotingLink;
-
-  await data.save();
-  res.redirect('/admin/dashboard-editor');
-});
-
-app.post('/admin/archive-notm', isAuthenticated, async (req, res) => {
-  try {
-    const data = await getDashboardData();
-    
-    if (!data.ninjasOfTheMonth || data.ninjasOfTheMonth.length === 0) {
-      return res.status(400).json({ success: false, error: 'No ninjas to archive.' });
-    }
-
-    const archiveEntry = {
-      month: data.notmMonth,
-      color: data.notmColor,
-      ninjas: data.ninjasOfTheMonth.map(n => ({
-        name: n.name,
-        type: n.type,
-        image: n.image
-      })),
-      dateArchived: new Date()
-    };
-
-    data.notmArchive.push(archiveEntry);
-    
-    // Clear current month after archiving? 
-    // Usually, you'd archive BEFORE setting up the new month.
-    // The user might want to keep the current one until they manually change it.
-    // Let's just archive for now.
-    
-    await data.save();
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Archive NOTM error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-app.get('/login', (req, res) => {
-  res.render('login', { error: null });
-});
-
-app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-  try {
-    const user = await User.findOne({ username });
-    if (user && bcrypt.compareSync(password, user.passwordHash)) {
-      req.session.user = { username: user.username, role: user.role };
-      return res.redirect('/admin');
-    }
-    res.render('login', { error: 'Invalid username or password' });
-  } catch (error) {
-    res.render('login', { error: `Auth Error: ${error.message}` });
-  }
-});
-
-app.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/');
-});
-
-app.get('/admin/ninja-bucks-award', isAuthenticated, async (req, res) => {
-  const data = await getDashboardData();
-  res.render('ninja-bucks-award', { leaderboard: data.leaderboard || [] });
-});
-
+app.get('/admin/ninja-bucks-award', isAuthenticated, async (req, res) => res.render('ninja-bucks-award', { leaderboard: (await getDashboardData()).leaderboard }));
 app.post('/admin/update-ninja-bucks', isAuthenticated, async (req, res) => {
+  const d = await getDashboardData();
+  const { ninjaName, amount, reason } = req.body;
+  const parsedAmount = parseInt(amount);
+  const n = d.leaderboard.find(x => x.name === ninjaName);
+  if (!n) return res.status(404).json({ error: 'Not found in leaderboard' });
+
+  n.total += parsedAmount; d.markModified('leaderboard'); await d.save();
+  await NBLog.create({ ninjaName, buttonAction: reason, amount: parsedAmount });
+  const updated = await Ninja.findOneAndUpdate(
+    { name: ninjaName }, { $inc: { totalNinjaBucks: parsedAmount } }, { new: true }
+  );
+  const newTotal = updated?.totalNinjaBucks ?? parsedAmount;
+
+  // Fire-and-forget: sync to Google Sheets without blocking the response
+  pushNBToSheets(ninjaName, parsedAmount, reason, newTotal).catch(() => {});
+
+  res.json({ success: true, newTotal: n.total });
+});
+
+app.post('/admin/nb-log/delete/:id', isAuthenticated, async (req, res) => {
   try {
-    const { ninjaName, amount, reason } = req.body;
-    const data = await getDashboardData();
-    
-    if (!data.spreadsheetId) {
-      return res.status(400).json({ success: false, error: 'Spreadsheet ID not configured.' });
-    }
-
-    // 1. Find the ninja in the local leaderboard to get the current total
-    const ninja = data.leaderboard.find(n => n.name === ninjaName);
-    if (!ninja) {
-      return res.status(404).json({ success: false, error: 'Ninja not found in local cache. Try syncing first.' });
-    }
-
-    // 2. Auth with Google
-    let authConfig = {
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    };
-    const credPath = path.join(__dirname, 'credentials.json');
-    if (process.env.GOOGLE_CREDENTIALS) {
-      authConfig.credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS.trim());
-    } else if (fs.existsSync(credPath)) {
-      authConfig.keyFilename = credPath;
-    }
-
-    const auth = new google.auth.GoogleAuth(authConfig);
-    const sheets = google.sheets({ version: 'v4', auth });
-
-    // 3. Get the full spreadsheet data to find the EXACT row
-    const range = data.spreadsheetRange || 'Ninja Bucks!A2:C150';
-    const sheetName = range.split('!')[0];
-    
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: data.spreadsheetId,
-      range: range,
-    });
-
-    const rows = response.data.values;
-    if (!rows) return res.status(500).json({ success: false, error: 'Could not fetch spreadsheet rows.' });
-
-    // Find row index (0-based in the fetched array, but we need to map it back to the sheet)
-    // Ninja Bucks!A2 starts at row 2. So array index 0 = row 2.
-    const startRow = parseInt(range.match(/\d+/)[0]); 
-    let rowIndex = -1;
-    for (let i = 0; i < rows.length; i++) {
-      if (rows[i][0] && rows[i][0].trim() === ninjaName) {
-        rowIndex = i + startRow;
-        break;
-      }
-    }
-
-    if (rowIndex === -1) {
-      return res.status(404).json({ success: false, error: 'Ninja name not found in spreadsheet.' });
-    }
-
-    // 4. Calculate new total
-    const newTotal = (parseInt(ninja.total) || 0) + (parseInt(amount) || 0);
-
-    // 5. Update the specific cell (Column B is Total)
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: data.spreadsheetId,
-      range: `${sheetName}!B${rowIndex}`,
-      valueInputOption: 'USER_ENTERED',
-      resource: { values: [[newTotal]] }
-    });
-
-    // 6. Append to Log Sheet
-    const logRange = data.logRange || 'Log!A2:D';
-    const timestamp = new Date().toLocaleString();
-    try {
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: data.spreadsheetId,
-        range: logRange,
-        valueInputOption: 'USER_ENTERED',
-        resource: {
-          values: [[timestamp, ninjaName, reason, amount]]
-        }
-      });
-    } catch (logErr) {
-      console.error('Failed to append to log sheet:', logErr.message);
-      // We don't fail the whole request if just logging fails, 
-      // but the total was updated.
-    }
-
-    // 7. Update local cache immediately
-    ninja.total = newTotal;
-    data.markModified('leaderboard');
-    await data.save();
-
-    res.json({ success: true, newTotal });
-  } catch (error) {
-    console.error('Update Ninja Bucks Error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
+    const log = await NBLog.findById(req.params.id);
+    if (!log) return res.status(404).json({ error: 'Log not found' });
+    const ninja = await Ninja.findOne({ name: log.ninjaName });
+    if (ninja) { ninja.totalNinjaBucks = Math.max(0, ninja.totalNinjaBucks - log.amount); await ninja.save(); }
+    await NBLog.findByIdAndDelete(req.params.id); res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Final error handler
-app.use((err, req, res, next) => {
-  console.error('Global Error:', err);
-  res.status(500).send(`Something broke: ${err.message}`);
+app.post('/admin/nb-log/update-damage/:id', isAuthenticated, async (req, res) => {
+  try {
+    const log = await NBLog.findById(req.params.id); if (!log) return res.status(404).json({ error: 'Log not found' });
+    const d = await getDashboardData(); const oldDmg = log.damageDealt || 0; const newDmg = parseInt(req.body.damageDealt) || 0;
+    d.bossHP = Math.max(0, Math.min(d.bossMaxHP, d.bossHP + oldDmg - newDmg)); await d.save();
+    log.damageDealt = newDmg; await log.save();
+    res.json({ success: true, newHP: d.bossHP });
+  } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
+app.post('/admin/progress-log/delete/:id', isAuthenticated, async (req, res) => {
+  try {
+    const log = await ProgressLog.findById(req.params.id); if (!log) return res.status(404).json({ error: 'Log not found' });
+    const ninja = await Ninja.findOne({ name: log.ninjaName });
+    if (ninja && ninja.currentBelt === log.newBelt && log.oldBelt) { ninja.currentBelt = log.oldBelt; await ninja.save(); }
+    await ProgressLog.findByIdAndDelete(req.params.id); res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.post('/admin/progress-log/post-discord', isAuthenticated, async (req, res) => {
+  try {
+    const logs = await ProgressLog.find({ discordPosted: false });
+    for (const log of logs) { await sendDiscordNotification(log.ninjaName, log.oldBelt, log.newBelt, log.notes); log.discordPosted = true; await log.save(); }
+    res.json({ success: true, count: logs.length });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.get('/admin/notm-archive-editor', isAuthenticated, async (req, res) => {
+  const archive = await HallOfFame.find({}).sort({ year: -1, _id: -1 });
+  res.render('notm-archive-editor', { data: await getDashboardData(), archive });
+});
+app.post('/admin/hall-of-fame/delete/:id', isAuthenticated, async (req, res) => {
+  try {
+    await HallOfFame.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+app.post('/admin/ninjas/:id/delete', isAuthenticated, async (req, res) => {
+  try {
+    await Ninja.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+app.get('/admin/master-data', isAuthenticated, async (req, res) => res.render('master-data', { ninjas: await Ninja.find({}).sort({ name: 1 }) }));
+app.get('/admin/progress-matrix', isAuthenticated, async (req, res) => res.render('progress-matrix', { ninjas: await Ninja.find({ isActive: true }).sort({ name: 1 }) }));
+app.get('/admin/progress-log', isAuthenticated, async (req, res) => res.render('progress-log', { logs: await ProgressLog.find({}).sort({ date: -1 }).limit(100) }));
+
+app.post('/admin/archive-month', isAuthenticated, async (req, res) => {
+  try {
+    const d = await getDashboardData();
+    await HallOfFame.create({ month: d.notmMonth, year: new Date().getFullYear(), ninjaOfTheMonth: d.ninjasOfTheMonth.map(n => n.name).join(', '), senseiOfTheMonth: d.senseiOfMonth });
+    d.notmArchive = d.notmArchive || [];
+    d.notmArchive.unshift({ month: d.notmMonth, color: d.notmColor, ninjas: d.ninjasOfTheMonth, dateArchived: new Date() });
+    d.markModified('notmArchive');
+    await d.save();
+    res.json({ success: true });
+  } catch (error) { res.status(500).send(error.message); }
+});
+
+app.use((err, req, res, next) => { console.error(err); res.status(500).send(err.message); });
 const PORT = process.env.PORT || 3000;
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-  });
-}
-
+app.listen(PORT, () => console.log(`Server is running on http://localhost:${PORT}`));
 module.exports = app;

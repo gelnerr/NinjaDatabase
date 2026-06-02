@@ -52,7 +52,13 @@ const dashboardSchema = new mongoose.Schema({
   monthlyLeaderboard: Array,
   beltsTotemData: Array,
   shopItems: [shopItemSchema],
-  lastUpdated: { type: Date, default: Date.now }
+  lastUpdated: { type: Date, default: Date.now },
+  bossHP: { type: Number, default: 100 },
+  bossMaxHP: { type: Number, default: 100 },
+  bossName: { type: String, default: 'Dr. Worm' },
+  bossImage: { type: String, default: '/img/cn_logo.png' },
+  bossActive: { type: Boolean, default: false },
+  backgroundImage: { type: String, default: '' }
 });
 
 module.exports = mongoose.model('Dashboard', dashboardSchema);

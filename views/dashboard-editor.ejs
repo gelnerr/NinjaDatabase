@@ -1,478 +1,247 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Editor - Admin</title>
-  <link rel="stylesheet" href="/css/bootstrap.min.css">
-  <link rel="stylesheet" href="/icons/bootstrap-icons.css">
-  <link rel="stylesheet" href="/css/responsive.css">
-  <style>
-    :root {
-      --cn-blue: #358ebc;
-      --cn-dark: #231f20;
-    }
-    body { background-color: #f5f6f8; font-family: 'Segoe UI', sans-serif; }
-    .sidebar {
-      width: 240px; background: var(--cn-dark); min-height: 100vh; color: white; position: fixed;
-    }
-    .main { margin-left: 240px; padding: 40px; }
-    .nav-link { color: #99aabb; padding: 12px 20px; border-radius: 8px; margin: 4px 10px; }
-    .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.1); color: white; }
-    .nav-link.active { background: var(--cn-blue); }
-    .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    .section-title { font-weight: 700; margin-bottom: 20px; color: var(--cn-dark); display: flex; align-items: center; gap: 10px; }
-  </style>
-</head>
-<body>
-  <div class="sidebar">
-    <div class="p-4 text-center">
-      <img src="/img/cn_logo.png" height="30" alt="Code Ninjas">
+<%- include('partials/admin-header', { title: 'Dashboard Settings', active: 'editor' }) %>
+
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h2 class="page-title">Lobby Dashboard Settings</h2>
+    <p class="text-muted mb-0">Configure what ninjas see on the large display in the lobby.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="/admin/notm-archive-editor" class="btn btn-outline-primary rounded-pill px-4">
+      <i class="bi bi-archive me-2"></i> Archive NOTM
+    </a>
+    <button type="submit" form="dashboardForm" class="btn btn-primary rounded-pill px-4 shadow-sm">
+      <i class="bi bi-cloud-upload-fill me-2"></i> Save All Changes
+    </button>
+  </div>
+</div>
+
+<form id="dashboardForm" action="/admin/update-dashboard" method="POST">
+  <div class="row">
+    <!-- Left Column: Core Display Settings -->
+    <div class="col-lg-4">
+      <div class="admin-card p-4 shadow-sm mb-4">
+        <h5 class="fw-bold mb-4"><i class="bi bi-display text-primary me-2"></i> Display Config</h5>
+        
+        <div class="mb-3">
+          <label class="form-label small fw-bold text-uppercase text-muted">Award Month</label>
+          <input type="text" name="notmMonth" class="form-control" value="<%= data.notmMonth %>" placeholder="e.g. October 2025">
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label small fw-bold text-uppercase text-muted">Branding Color</label>
+          <input type="color" name="notmColor" class="form-control form-control-color w-100" value="<%= data.notmColor || '#358ebc' %>">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label small fw-bold text-uppercase text-muted">Lobby Display Theme</label>
+          <select name="theme" class="form-select">
+            <option value="classic" <%= data.theme === 'classic' ? 'selected' : '' %>>Classic Dojo (Default)</option>
+            <option value="space" <%= data.theme === 'space' ? 'selected' : '' %>>Space Adventure</option>
+            <option value="cyber" <%= data.theme === 'cyber' ? 'selected' : '' %>>Cyber / Tech</option>
+          </select>
+          <div class="form-text mt-1 small">This controls the theme on the main lobby screen at <code>/</code></div>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label small fw-bold text-uppercase text-muted">Background Image URL</label>
+          <input type="text" name="backgroundImage" class="form-control" value="<%= data.backgroundImage %>" placeholder="https://...">
+          <div class="form-text mt-1 small">Leave blank for theme default. Supports high-res images.</div>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label small fw-bold text-uppercase text-muted">Sensei Voting Link</label>
+          <input type="url" name="senseiVotingLink" class="form-control" value="<%= data.senseiVotingLink %>" placeholder="https://forms.gle/...">
+        </div>
+        
+        <div class="mb-0">
+          <label class="form-label small fw-bold text-uppercase text-muted">Sensei of the Month</label>
+          <input type="text" name="senseiOfMonth" class="form-control" value="<%= data.senseiOfMonth %>">
+        </div>
+      </div>
+
+      <div class="admin-card p-4 shadow-sm mb-4">
+        <h5 class="fw-bold mb-3"><i class="bi bi-lightbulb-fill text-info me-2"></i> Fun Fact</h5>
+        <textarea name="funFact" class="form-control" rows="4" placeholder="Enter an interesting fact for the ninjas..."><%= data.funFact %></textarea>
+      </div>
     </div>
-    <div class="mt-4">
-      <a href="/admin" class="nav-link d-block"><i class="bi bi-speedometer2 me-2"></i> Dashboard Home</a>
-      <a href="/admin/dashboard-editor" class="nav-link d-block active"><i class="bi bi-pencil-square me-2"></i> Edit Ninja Dashboard</a>
-      <a href="/admin/ninjabucks-editor" class="nav-link d-block"><i class="bi bi-currency-dollar me-2"></i> Edit Ninja Bucks</a>
-      <a href="/admin/shop-editor" class="nav-link d-block"><i class="bi bi-cart4 me-2"></i> Edit Ninja Shop</a>
-      <a href="/ninjabucks" class="nav-link d-block"><i class="bi bi-coin me-2"></i> Ninja Bucks</a>
-      <a href="/shop" class="nav-link d-block"><i class="bi bi-cart4 me-2"></i> Ninja Shop</a>
-      <a href="/" target="_blank" class="nav-link d-block"><i class="bi bi-eye-fill me-2"></i> View Ninja Dashboard</a>
-      <a href="/logout" class="nav-link d-block mt-4 text-danger"><i class="bi bi-box-arrow-right me-2"></i> Logout</a>
+
+    <!-- Right Column: Interactive Content -->
+    <div class="col-lg-8">
+      <!-- Ninjas of the Month Section -->
+      <div class="admin-card p-4 shadow-sm mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="fw-bold mb-0"><i class="bi bi-people-fill text-warning me-2"></i> Ninjas of the Month</h5>
+          <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3" onclick="addNOTM()">
+            <i class="bi bi-plus-lg me-1"></i> Add NOTM
+          </button>
+        </div>
+        
+        <div id="notmList" class="row g-3">
+          <% (data.ninjasOfTheMonth || []).forEach((n, i) => { %>
+            <div class="col-md-6 notm-item">
+              <div class="border rounded-4 p-3 bg-light position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" onclick="this.closest('.notm-item').remove()"></button>
+                <div class="mb-2">
+                  <label class="small text-muted fw-bold">Ninja Name</label>
+                  <input type="text" name="notm_name_<%= i %>" class="form-control form-control-sm" value="<%= n.name %>" required>
+                </div>
+                <div class="row g-2">
+                  <div class="col-6">
+                    <label class="small text-muted fw-bold">Category</label>
+                    <select name="notm_type_<%= i %>" class="form-select form-select-sm">
+                      <option value="Focused" <%= n.type === 'Focused' ? 'selected' : '' %>>Focused</option>
+                      <option value="Friendly" <%= n.type === 'Friendly' ? 'selected' : '' %>>Friendly</option>
+                      <option value="Helpful" <%= n.type === 'Helpful' ? 'selected' : '' %>>Helpful</option>
+                      <option value="Creative" <%= n.type === 'Creative' ? 'selected' : '' %>>Creative</option>
+                      <option value="Scholar" <%= n.type === 'Scholar' ? 'selected' : '' %>>Scholar</option>
+                      <option value="Skillful" <%= n.type === 'Skillful' ? 'selected' : '' %>>Skillful</option>
+                      <option value="Collector" <%= n.type === 'Collector' ? 'selected' : '' %>>Collector</option>
+                    </select>
+                  </div>
+                  <div class="col-6">
+                    <label class="small text-muted fw-bold">Image URL</label>
+                    <input type="text" name="notm_image_<%= i %>" class="form-control form-control-sm" value="<%= n.image %>" placeholder="/img/notm/focused.png">
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+
+      <!-- Weekly Activities Section -->
+      <div class="admin-card p-4 shadow-sm mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="fw-bold mb-0"><i class="bi bi-calendar-week text-success me-2"></i> Weekly Activities</h5>
+          <span class="badge bg-light text-dark border">Auto-Rotates</span>
+        </div>
+
+        <ul class="nav nav-pills mb-4" id="activityTabs" role="tablist">
+          <li class="nav-item">
+            <button class="nav-link active rounded-pill px-4 me-2" data-bs-toggle="pill" data-bs-target="#this-week" type="button">This Week</button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link rounded-pill px-4" data-bs-toggle="pill" data-bs-target="#next-week" type="button">Next Week</button>
+          </li>
+        </ul>
+
+        <div class="tab-content">
+          <div class="tab-pane fade show active" id="this-week">
+            <div id="thisWeekList">
+              <% (data.activitiesThisWeek || []).forEach((act, i) => { %>
+                <div class="activity-row row g-2 mb-3 align-items-end">
+                  <div class="col-md-5">
+                    <label class="small text-muted mb-1">Description</label>
+                    <input type="text" name="activitiesThisWeek_desc_<%= i %>" class="form-control" value="<%= act.description %>">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="small text-muted mb-1">Image URL</label>
+                    <input type="text" name="activitiesThisWeek_url_<%= i %>" class="form-control" value="<%= act.image %>">
+                  </div>
+                  <div class="col-md-2">
+                    <label class="small text-muted mb-1">Link/Slug</label>
+                    <input type="text" name="activitiesThisWeek_link_<%= i %>" class="form-control" value="<%= act.link %>">
+                  </div>
+                  <div class="col-md-1">
+                    <button type="button" class="btn btn-outline-danger w-100" onclick="this.parentElement.parentElement.remove()"><i class="bi bi-trash"></i></button>
+                  </div>
+                </div>
+              <% }); %>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addActivity('thisWeekList', 'activitiesThisWeek')">
+              <i class="bi bi-plus-lg me-1"></i> Add Activity
+            </button>
+          </div>
+          
+          <div class="tab-pane fade" id="next-week">
+            <div id="nextWeekList">
+              <% (data.activitiesNextWeek || []).forEach((act, i) => { %>
+                <div class="activity-row row g-2 mb-3 align-items-end">
+                  <div class="col-md-5">
+                    <label class="small text-muted mb-1">Description</label>
+                    <input type="text" name="activitiesNextWeek_desc_<%= i %>" class="form-control" value="<%= act.description %>">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="small text-muted mb-1">Image URL</label>
+                    <input type="text" name="activitiesNextWeek_url_<%= i %>" class="form-control" value="<%= act.image %>">
+                  </div>
+                  <div class="col-md-2">
+                    <label class="small text-muted mb-1">Link/Slug</label>
+                    <input type="text" name="activitiesNextWeek_link_<%= i %>" class="form-control" value="<%= act.link %>">
+                  </div>
+                  <div class="col-md-1">
+                    <button type="button" class="btn btn-outline-danger w-100" onclick="this.parentElement.parentElement.remove()"><i class="bi bi-trash"></i></button>
+                  </div>
+                </div>
+              <% }); %>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addActivity('nextWeekList', 'activitiesNextWeek')">
+              <i class="bi bi-plus-lg me-1"></i> Add Activity
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
+</form>
 
-  <main class="main">
-    <h2 class="mb-4">Ninja Dashboard Editor</h2>
-    <p class="text-muted">Update the content shown on the kid-friendly dashboard.</p>
+<script>
+  function addActivity(containerId, prefix) {
+    const container = document.getElementById(containerId);
+    const index = Date.now() + Math.random(); // Unique-ish index
+    const div = document.createElement('div');
+    div.className = 'activity-row row g-2 mb-3 align-items-end';
+    div.innerHTML = `
+      <div class="col-md-5">
+        <input type="text" name="${prefix}_desc_${index}" class="form-control" placeholder="Activity name">
+      </div>
+      <div class="col-md-4">
+        <input type="text" name="${prefix}_url_${index}" class="form-control" placeholder="/img/...">
+      </div>
+      <div class="col-md-2">
+        <input type="text" name="${prefix}_link_${index}" class="form-control" placeholder="Link slug">
+      </div>
+      <div class="col-md-1">
+        <button type="button" class="btn btn-outline-danger w-100" onclick="this.parentElement.parentElement.remove()"><i class="bi bi-trash"></i></button>
+      </div>
+    `;
+    container.appendChild(div);
+  }
 
-    <% 
-      const types = [
-        { id: 'challenge', label: 'Challenge' },
-        { id: 'collector', label: 'Collector' },
-        { id: 'creative', label: 'Creative' },
-        { id: 'focused', label: 'Focused' },
-        { id: 'friendly', label: 'Friendly' },
-        { id: 'helpful', label: 'Helpful' },
-        { id: 'scholar', label: 'Scholar' },
-        { id: 'skillful', label: 'Skillful' },
-        { id: 'surprise_ninja', label: 'Surprise Ninja' }
-      ];
-    %>
-
-    <form action="/admin/update-dashboard" method="POST" enctype="multipart/form-data">
-      
-      <!-- Theme Selection -->
-      <div class="card p-4">
-        <h5 class="section-title"><i class="bi bi-palette"></i> Select Ninja Dashboard Theme</h5>
-        <div class="row">
-          <div class="col-md-4">
-            <div class="form-check card p-3 h-100 <%= data.theme === 'space' ? 'border-primary' : '' %>">
-              <input class="form-check-input" type="radio" name="theme" id="themeSpace" value="space" <%= data.theme === 'space' ? 'checked' : '' %>>
-              <label class="form-check-label w-100" for="themeSpace">
-                <strong>Space Adventure</strong>
-                <p class="small text-muted mb-0">Floating planets, stars, and cosmic purple colors.</p>
-              </label>
-            </div>
+  function addNOTM() {
+    const container = document.getElementById('notmList');
+    const index = Date.now() + Math.random();
+    const div = document.createElement('div');
+    div.className = 'col-md-6 notm-item';
+    div.innerHTML = `
+      <div class="border rounded-4 p-3 bg-light position-relative">
+        <button type="button" class="btn-close position-absolute top-0 end-0 m-3" onclick="this.closest('.notm-item').remove()"></button>
+        <div class="mb-2">
+          <label class="small text-muted fw-bold">Ninja Name</label>
+          <input type="text" name="notm_name_${index}" class="form-control form-control-sm" required>
+        </div>
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="small text-muted fw-bold">Category</label>
+            <select name="notm_type_${index}" class="form-select form-select-sm">
+              <option value="Focused">Focused</option>
+              <option value="Friendly">Friendly</option>
+              <option value="Helpful">Helpful</option>
+              <option value="Creative">Creative</option>
+              <option value="Scholar">Scholar</option>
+              <option value="Skillful">Skillful</option>
+              <option value="Collector">Collector</option>
+            </select>
           </div>
-          <div class="col-md-4">
-            <div class="form-check card p-3 h-100 <%= data.theme === 'cyber' ? 'border-primary' : '' %>">
-              <input class="form-check-input" type="radio" name="theme" id="themeCyber" value="cyber" <%= data.theme === 'cyber' ? 'checked' : '' %>>
-              <label class="form-check-label w-100" for="themeCyber">
-                <strong>Cyber Tech</strong>
-                <p class="small text-muted mb-0">High-tech grid, neon greens and oranges, coding vibe.</p>
-              </label>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="form-check card p-3 h-100 <%= data.theme === 'classic' ? 'border-primary' : '' %>">
-              <input class="form-check-input" type="radio" name="theme" id="themeClassic" value="classic" <%= data.theme === 'classic' ? 'checked' : '' %>>
-              <label class="form-check-label w-100" for="themeClassic">
-                <strong>Classic Dojo</strong>
-                <p class="small text-muted mb-0">Traditional Code Ninjas red and black dōjō style.</p>
-              </label>
-            </div>
+          <div class="col-6">
+            <label class="small text-muted fw-bold">Image URL</label>
+            <input type="text" name="notm_image_${index}" class="form-control form-control-sm" placeholder="/img/notm/focused.png">
           </div>
         </div>
       </div>
+    `;
+    container.appendChild(div);
+  }
+</script>
 
-      <!-- Activities This Week -->
-      <div class="card p-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="section-title mb-0"><i class="bi bi-calendar-week"></i> Activities This Week</h5>
-          <button type="button" class="btn btn-sm btn-outline-primary" onclick="addActivity('this')"><i class="bi bi-plus-lg"></i> Add Activity</button>
-        </div>
-        <div id="activities-this-container">
-          <% data.activitiesThisWeek.forEach((act, index) => { %>
-            <div class="activity-row row mb-3 pb-3 border-bottom" data-index="<%= index %>">
-              <div class="col-md-2 text-center">
-                <img src="<%= act.image %>" class="img-fluid rounded border mb-2" style="max-height: 80px; object-fit: contain;" id="preview_this_<%= index %>">
-                <input type="file" name="activitiesThisWeek_image_<%= index %>" class="form-control form-control-sm mb-2">
-                <button type="button" class="btn btn-sm btn-outline-danger w-100" onclick="removeActivity(this)"><i class="bi bi-trash"></i> Remove</button>
-              </div>
-              <div class="col-md-10">
-                <div class="row">
-                  <div class="col-md-12 mb-2">
-                    <label class="form-label small mb-1">Image URL (Optional - overrides file upload)</label>
-                    <input type="text" name="activitiesThisWeek_url_<%= index %>" value="<%= (act.image && act.image.startsWith('http')) ? act.image : '' %>" class="form-control form-control-sm" placeholder="https://example.com/image.png" onchange="updatePreview(this, 'preview_this_<%= index %>')">
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label small mb-1">Description</label>
-                    <input type="text" name="activitiesThisWeek_desc_<%= index %>" value="<%= act.description %>" class="form-control">
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label small mb-1">Game Link</label>
-                    <input type="text" name="activitiesThisWeek_link_<%= index %>" value="<%= act.link %>" class="form-control">
-                  </div>
-                </div>
-              </div>
-            </div>
-          <% }) %>
-        </div>
-      </div>
-
-      <!-- Activities Next Week -->
-      <div class="card p-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="section-title mb-0"><i class="bi bi-calendar-plus"></i> Activities Next Week</h5>
-          <button type="button" class="btn btn-sm btn-outline-primary" onclick="addActivity('next')"><i class="bi bi-plus-lg"></i> Add Activity</button>
-        </div>
-        <div id="activities-next-container">
-          <% data.activitiesNextWeek.forEach((act, index) => { %>
-            <div class="activity-row row mb-3 pb-3 border-bottom" data-index="<%= index %>">
-              <div class="col-md-2 text-center">
-                <img src="<%= act.image %>" class="img-fluid rounded border mb-2" style="max-height: 80px; object-fit: contain;" id="preview_next_<%= index %>">
-                <input type="file" name="activitiesNextWeek_image_<%= index %>" class="form-control form-control-sm mb-2">
-                <button type="button" class="btn btn-sm btn-outline-danger w-100" onclick="removeActivity(this)"><i class="bi bi-trash"></i> Remove</button>
-              </div>
-              <div class="col-md-10">
-                <div class="row">
-                  <div class="col-md-12 mb-2">
-                    <label class="form-label small mb-1">Image URL (Optional - overrides file upload)</label>
-                    <input type="text" name="activitiesNextWeek_url_<%= index %>" value="<%= (act.image && act.image.startsWith('http')) ? act.image : '' %>" class="form-control form-control-sm" placeholder="https://example.com/image.png" onchange="updatePreview(this, 'preview_next_<%= index %>')">
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label small mb-1">Description</label>
-                    <input type="text" name="activitiesNextWeek_desc_<%= index %>" value="<%= act.description %>" class="form-control">
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label small mb-1">Preview Link</label>
-                    <input type="text" name="activitiesNextWeek_link_<%= index %>" value="<%= act.link %>" class="form-control">
-                  </div>
-                </div>
-              </div>
-            </div>
-          <% }) %>
-        </div>
-      </div>
-
-      <!-- Special Events -->
-      <div class="card p-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="section-title mb-0"><i class="bi bi-star"></i> Special Events</h5>
-          <button type="button" class="btn btn-sm btn-outline-primary" onclick="addEvent()"><i class="bi bi-plus-lg"></i> Add Event</button>
-        </div>
-        <div id="events-container">
-          <% data.specialEvents.forEach((event, index) => { %>
-            <div class="event-row-item row mb-3" data-index="<%= index %>">
-              <div class="col-md-3">
-                <input type="text" name="specialEvents_date_<%= index %>" value="<%= event.date %>" class="form-control" placeholder="Date (e.g. April 15)">
-              </div>
-              <div class="col-md-7">
-                <input type="text" name="specialEvents_text_<%= index %>" value="<%= event.text %>" class="form-control" placeholder="Event Description">
-              </div>
-              <div class="col-md-2">
-                <button type="button" class="btn btn-outline-danger w-100" onclick="removeEvent(this)"><i class="bi bi-trash"></i> Remove</button>
-              </div>
-            </div>
-          <% }) %>
-        </div>
-      </div>
-
-      <!-- Fun Fact & Sensei info -->
-      <div class="row">
-        <div class="col-md-6">
-          <div class="card p-4">
-            <h5 class="section-title"><i class="bi bi-lightbulb"></i> Fun Fact</h5>
-            <textarea name="funFact" class="form-control" rows="3"><%= data.funFact %></textarea>
-          </div>
-        </div>
-        <div class="col-md-6">
-          <div class="card p-4">
-            <h5 class="section-title"><i class="bi bi-person-badge"></i> Sensei of the Month</h5>
-            <div class="mb-3">
-              <label class="form-label">Current Sensei</label>
-              <input type="text" name="senseiOfMonth" value="<%= data.senseiOfMonth %>" class="form-control">
-            </div>
-            <div>
-              <label class="form-label">Voting Link (Google Form, etc.)</label>
-              <input type="text" name="senseiVotingLink" value="<%= data.senseiVotingLink %>" class="form-control">
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Ninjas of the Month -->
-      <div class="card p-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="section-title mb-0"><i class="bi bi-trophy"></i> Ninjas of the Month</h5>
-          <div>
-            <a href="/notm-archive" target="_blank" class="btn btn-sm btn-outline-secondary me-2"><i class="bi bi-archive"></i> View Archive</a>
-            <button type="button" class="btn btn-sm btn-outline-warning me-2" onclick="archiveCurrentMonth()"><i class="bi bi-save"></i> Archive Current Month</button>
-            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addNinja()"><i class="bi bi-plus-lg"></i> Add Ninja</button>
-          </div>
-        </div>
-        
-        <div class="row mb-4">
-          <div class="col-md-6">
-            <label class="form-label font-weight-bold">Display Month</label>
-            <input type="text" name="notmMonth" value="<%= data.notmMonth %>" class="form-control" placeholder="e.g. April 2026">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label font-weight-bold">Section Theme Color</label>
-            <input type="color" name="notmColor" value="<%= data.notmColor %>" class="form-control form-control-color w-100" style="height: 38px;">
-          </div>
-        </div>
-
-        <div class="row" id="notm-container">
-          <% data.ninjasOfTheMonth.forEach((ninja, index) => { %>
-            <div class="col-md-4 mb-4 notm-item" data-index="<%= index %>">
-              <div class="border rounded p-3 bg-light position-relative">
-                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="removeNinja(this)" style="z-index: 10;">
-                  <i class="bi bi-trash"></i>
-                </button>
-                <div class="text-center mb-2">
-                  <img src="/img/notm/<%= ninja.type %>.png" class="img-fluid rounded" style="height: 60px;" id="notm_img_<%= index %>">
-                </div>
-                <div class="mb-2">
-                  <label class="small text-muted">Ninja Name</label>
-                  <input type="text" name="notm_name_<%= index %>" value="<%= ninja.name %>" class="form-control form-control-sm">
-                </div>
-                <div>
-                  <label class="small text-muted">Award Type</label>
-                  <select name="notm_type_<%= index %>" class="form-select form-select-sm" onchange="document.getElementById('notm_img_<%= index %>').src='/img/notm/'+this.value+'.png'">
-                    <% types.forEach(t => { %>
-                      <option value="<%= t.id %>" <%= ninja.type === t.id ? 'selected' : '' %>><%= t.label %></option>
-                    <% }) %>
-                  </select>
-                </div>
-              </div>
-            </div>
-          <% }) %>
-        </div>
-      </div>
-
-      <div class="text-end mt-4">
-        <button type="submit" class="btn btn-primary btn-lg px-5">Save Changes</button>
-      </div>
-    </form>
-  </main>
-
-  <script>
-    const NOTM_TYPES = <%- JSON.stringify(types) %>;
-
-    function syncLeaderboard() {
-      const btn = event.currentTarget;
-      const originalHtml = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Syncing...';
-
-      fetch('/admin/sync-leaderboard', { method: 'POST' })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            alert('Leaderboard synced successfully! Found ' + data.count + ' ninjas.');
-            window.location.reload();
-          } else {
-            alert('Sync Error: ' + (data.error || 'Unknown error'));
-          }
-        })
-        .catch(err => alert('Network Error: ' + err.message))
-        .finally(() => {
-          btn.disabled = false;
-          btn.innerHTML = originalHtml;
-        });
-    }
-
-    function updatePreview(input, imgId) {
-      if (input.value) {
-        document.getElementById(imgId).src = input.value;
-      }
-    }
-
-    function removeActivity(btn) {
-      const row = btn.closest('.activity-row');
-      const container = row.parentElement;
-      row.remove();
-      reindexRows(container);
-    }
-
-    function reindexRows(container) {
-      const prefix = container.id === 'activities-this-container' ? 'activitiesThisWeek' : 'activitiesNextWeek';
-      const previewPrefix = container.id === 'activities-this-container' ? 'preview_this' : 'preview_next';
-      
-      const rows = container.querySelectorAll('.activity-row');
-      rows.forEach((row, i) => {
-        row.setAttribute('data-index', i);
-        row.querySelector('img').id = `${previewPrefix}_${i}`;
-        row.querySelector('input[type="file"]').setAttribute('name', `${prefix}_image_${i}`);
-        
-        const inputs = row.querySelectorAll('input[type="text"]');
-        inputs[0].setAttribute('name', `${prefix}_url_${i}`);
-        inputs[0].setAttribute('onchange', `updatePreview(this, '${previewPrefix}_${i}')`);
-        inputs[1].setAttribute('name', `${prefix}_desc_${i}`);
-        inputs[2].setAttribute('name', `${prefix}_link_${i}`);
-      });
-    }
-
-    function addActivity(type) {
-      const containerId = type === 'this' ? 'activities-this-container' : 'activities-next-container';
-      const container = document.getElementById(containerId);
-      const index = container.querySelectorAll('.activity-row').length;
-      const prefix = type === 'this' ? 'activitiesThisWeek' : 'activitiesNextWeek';
-      const previewPrefix = type === 'this' ? 'preview_this' : 'preview_next';
-
-      const html = `
-        <div class="activity-row row mb-3 pb-3 border-bottom" data-index="${index}">
-          <div class="col-md-2 text-center">
-            <img src="/img/cn_logo.png" class="img-fluid rounded border mb-2" style="max-height: 80px; object-fit: contain;" id="${previewPrefix}_${index}">
-            <input type="file" name="${prefix}_image_${index}" class="form-control form-control-sm mb-2">
-            <button type="button" class="btn btn-sm btn-outline-danger w-100" onclick="removeActivity(this)"><i class="bi bi-trash"></i> Remove</button>
-          </div>
-          <div class="col-md-10">
-            <div class="row">
-              <div class="col-md-12 mb-2">
-                <label class="form-label small mb-1">Image URL (Optional)</label>
-                <input type="text" name="${prefix}_url_${index}" class="form-control form-control-sm" placeholder="https://example.com/image.png" onchange="updatePreview(this, '${previewPrefix}_${index}')">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label small mb-1">Description</label>
-                <input type="text" name="${prefix}_desc_${index}" class="form-control">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label small mb-1">Link</label>
-                <input type="text" name="${prefix}_link_${index}" class="form-control">
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-      container.insertAdjacentHTML('beforeend', html);
-    }
-
-    function removeEvent(btn) {
-      const row = btn.closest('.event-row-item');
-      const container = row.parentElement;
-      row.remove();
-      reindexEvents(container);
-    }
-
-    function reindexEvents(container) {
-      const rows = container.querySelectorAll('.event-row-item');
-      rows.forEach((row, i) => {
-        row.setAttribute('data-index', i);
-        row.querySelector('input[name^="specialEvents_date"]').setAttribute('name', `specialEvents_date_${i}`);
-        row.querySelector('input[name^="specialEvents_text"]').setAttribute('name', `specialEvents_text_${i}`);
-      });
-    }
-
-    function addEvent() {
-      const container = document.getElementById('events-container');
-      const index = container.querySelectorAll('.event-row-item').length;
-      const html = `
-        <div class="event-row-item row mb-3" data-index="${index}">
-          <div class="col-md-3">
-            <input type="text" name="specialEvents_date_${index}" class="form-control" placeholder="Date (e.g. April 15)">
-          </div>
-          <div class="col-md-7">
-            <input type="text" name="specialEvents_text_${index}" class="form-control" placeholder="Event Description">
-          </div>
-          <div class="col-md-2">
-            <button type="button" class="btn btn-outline-danger w-100" onclick="removeEvent(this)"><i class="bi bi-trash"></i> Remove</button>
-          </div>
-        </div>
-      `;
-      container.insertAdjacentHTML('beforeend', html);
-    }
-
-    function removeNinja(btn) {
-      const item = btn.closest('.notm-item');
-      item.remove();
-      reindexNinjas();
-    }
-
-    function reindexNinjas() {
-      const container = document.getElementById('notm-container');
-      const items = container.querySelectorAll('.notm-item');
-      items.forEach((item, i) => {
-        item.setAttribute('data-index', i);
-        const img = item.querySelector('img');
-        img.id = `notm_img_${i}`;
-        const nameInput = item.querySelector('input[type="text"]');
-        nameInput.setAttribute('name', `notm_name_${i}`);
-        const select = item.querySelector('select');
-        select.setAttribute('name', `notm_type_${i}`);
-        select.setAttribute('onchange', `document.getElementById('notm_img_${i}').src='/img/notm/'+this.value+'.png'`);
-      });
-    }
-
-    function addNinja() {
-      const container = document.getElementById('notm-container');
-      const index = container.querySelectorAll('.notm-item').length;
-      
-      let optionsHtml = '';
-      NOTM_TYPES.forEach(t => {
-        optionsHtml += `<option value="${t.id}">${t.label}</option>`;
-      });
-
-      const html = `
-        <div class="col-md-4 mb-4 notm-item" data-index="${index}">
-          <div class="border rounded p-3 bg-light position-relative">
-            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="removeNinja(this)" style="z-index: 10;">
-              <i class="bi bi-trash"></i>
-            </button>
-            <div class="text-center mb-2">
-              <img src="/img/notm/challenge.png" class="img-fluid rounded" style="height: 60px;" id="notm_img_${index}">
-            </div>
-            <div class="mb-2">
-              <label class="small text-muted">Ninja Name</label>
-              <input type="text" name="notm_name_${index}" value="" class="form-control form-control-sm">
-            </div>
-            <div>
-              <label class="small text-muted">Award Type</label>
-              <select name="notm_type_${index}" class="form-select form-select-sm" onchange="document.getElementById('notm_img_${index}').src='/img/notm/'+this.value+'.png'">
-                ${optionsHtml}
-              </select>
-            </div>
-          </div>
-        </div>
-      `;
-      container.insertAdjacentHTML('beforeend', html);
-    }
-
-    function archiveCurrentMonth() {
-      if (!confirm('Are you sure you want to archive the current month? This will save the current list of Ninjas of the Month to the archive.')) return;
-      
-      const btn = event.currentTarget;
-      const originalHtml = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Archiving...';
-
-      fetch('/admin/archive-notm', { method: 'POST' })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            alert('Current month archived successfully!');
-            // Optional: Redirect to archive or stay on page
-          } else {
-            alert('Archive Error: ' + (data.error || 'Unknown error'));
-          }
-        })
-        .catch(err => alert('Network Error: ' + err.message))
-        .finally(() => {
-          btn.disabled = false;
-          btn.innerHTML = originalHtml;
-        });
-    }
-  </script>
-</body>
-</html>
+<%- include('partials/admin-footer') %>
