@@ -256,6 +256,61 @@ const pushBeltToSheets = async (ninjaName, oldBelt, newBelt, notes) => {
   } catch(e) { console.error('[Sheets] pushBeltToSheets error:', e.message); }
 };
 
+// Delete a row from the NB Log sheet and update the ninja's total in data sheet
+const deleteFromNBLogSheet = async (ninjaName, amount, reason, newNinjaTotal) => {
+  try {
+    const d = await getDashboardData();
+    if (!d?.mainSpreadsheetId) return;
+    const sheets = await getSheetClient();
+    if (!sheets) return;
+    const sid = d.mainSpreadsheetId;
+
+    // Read all log entries (rows 9+ are actual log entries)
+    const logRes = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'NB Log!A9:D' });
+    const rows = logRes.data.values || [];
+
+    const amtStr = amount >= 0 ? `+${amount}` : `${amount}`;
+
+    // Search bottom-up so we match the most recent duplicate
+    let matchIndex = -1;
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (rows[i][1]?.trim() === ninjaName &&
+          rows[i][2]?.trim() === reason &&
+          rows[i][3]?.trim() === amtStr) {
+        matchIndex = i;
+        break;
+      }
+    }
+
+    if (matchIndex === -1) {
+      console.log(`[Sheets] No matching NB Log row for ${ninjaName} ${amtStr} "${reason}"`);
+    } else {
+      // Get the NB Log sheet ID (needed for deleteDimension)
+      const ssInfo = await sheets.spreadsheets.get({ spreadsheetId: sid });
+      const sheetId = ssInfo.data.sheets.find(s => s.properties.title === 'NB Log')?.properties.sheetId;
+      if (sheetId !== undefined) {
+        // Row 9 in the sheet = index 8 (0-indexed); matchIndex is offset within A9:D
+        await sheets.spreadsheets.batchUpdate({
+          spreadsheetId: sid,
+          requestBody: { requests: [{ deleteDimension: {
+            range: { sheetId, dimension: 'ROWS', startIndex: 8 + matchIndex, endIndex: 9 + matchIndex }
+          }}]}
+        });
+        console.log(`[Sheets] Deleted NB Log row ${9 + matchIndex} for ${ninjaName} ${amtStr}`);
+      }
+    }
+
+    // Always update the running total in data sheet
+    const row = await findSheetRow(sheets, sid, 'data', 'A', ninjaName);
+    if (row) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: sid, range: `data!F${row}`,
+        valueInputOption: 'RAW', requestBody: { values: [[newNinjaTotal]] }
+      });
+    }
+  } catch(e) { console.error('[Sheets] deleteFromNBLogSheet error:', e.message); }
+};
+
 const syncGoogleSheets = async (data) => {
   if (!data.spreadsheetId) return 0;
   const sheets = await getSheetClient();
@@ -776,9 +831,26 @@ app.post('/admin/nb-log/delete/:id', isAuthenticated, async (req, res) => {
   try {
     const log = await NBLog.findById(req.params.id);
     if (!log) return res.status(404).json({ error: 'Log not found' });
+
+    // Refund the bucks from the Ninja document
+    let newNinjaTotal = 0;
     const ninja = await Ninja.findOne({ name: log.ninjaName });
-    if (ninja) { ninja.totalNinjaBucks = Math.max(0, ninja.totalNinjaBucks - log.amount); await ninja.save(); }
-    await NBLog.findByIdAndDelete(req.params.id); res.json({ success: true });
+    if (ninja) {
+      ninja.totalNinjaBucks = Math.max(0, ninja.totalNinjaBucks - log.amount);
+      await ninja.save();
+      newNinjaTotal = ninja.totalNinjaBucks;
+    }
+
+    // Update the leaderboard cache
+    const d = await getDashboardData();
+    const n = d.leaderboard.find(x => x.name === log.ninjaName);
+    if (n) { n.total -= log.amount; d.markModified('leaderboard'); await d.save(); }
+
+    // Delete from MongoDB then sync the deletion to Sheets
+    await NBLog.findByIdAndDelete(req.params.id);
+    await deleteFromNBLogSheet(log.ninjaName, log.amount, log.buttonAction, newNinjaTotal);
+
+    res.json({ success: true });
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
