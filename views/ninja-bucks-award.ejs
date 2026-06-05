@@ -54,8 +54,16 @@
         <div id="reasonPills" class="d-flex flex-wrap gap-2 mb-3">
           <!-- Populated by JS -->
         </div>
+        <!-- Running total indicator -->
+        <div id="selectedCount" class="small fw-bold text-primary mt-2" style="min-height:1.2em;"></div>
+        <!-- Rules of Dojo: variable amount stepper -->
+        <div id="dojoAmountWrap" class="align-items-center gap-2 mt-2" style="display:none;">
+          <span class="small fw-bold text-muted">Rules of the Dojo amount:</span>
+          <input type="number" id="dojoAmount" class="form-control form-control-sm" style="width:80px;" min="0" max="5" value="5" oninput="updateTotal()">
+          <span class="small text-muted">(0–5 NB)</span>
+        </div>
         <!-- Other: custom text input, hidden until "Other" is picked -->
-        <div id="otherReasonWrap" style="display:none;">
+        <div id="otherReasonWrap" style="display:none;" class="mt-2">
           <input type="text" id="otherReasonText" class="form-control" placeholder="Describe the reason..." maxlength="60">
         </div>
       </div>
@@ -88,25 +96,6 @@
       </div>
     </div>
 
-    <!-- Legend -->
-    <div id="legendCard" class="admin-card p-4 shadow-sm mt-4">
-      <h6 class="fw-bold mb-3"><i class="bi bi-info-circle-fill text-primary me-2"></i>NB Earning Legend</h6>
-      <div class="row g-2">
-        <% [
-          { reasons: ['Completed Build/Quest', 'Published Community Game', 'Daily Activity Challenge', 'Creative'], nb: 1,  bg: '#eff6ff', color: '#1d4ed8', badge: '#3b82f6' },
-          { reasons: ['Impact Level Up', 'Got a Stripe'],                                                           nb: 2,  bg: '#f5f3ff', color: '#6d28d9', badge: '#8b5cf6' },
-          { reasons: ['Belt Up', 'Boss Badge', 'Birthday', 'Ninja of the Month', 'Rules of the Dojo'],             nb: 5,  bg: '#fffbeb', color: '#92400e', badge: '#f59e0b' },
-          { reasons: ['Participated in Game Jam'],                                                                  nb: 10, bg: '#fef2f2', color: '#b91c1c', badge: '#ef4444' }
-        ].forEach(group => { %>
-          <div class="col-md-6">
-            <div class="d-flex align-items-start gap-2 p-2 rounded-3" style="background:<%= group.bg %>;">
-              <span class="badge rounded-pill px-3 py-2 fw-bold mt-1" style="background:<%= group.badge %>; min-width:52px; text-align:center;">+<%= group.nb %> NB</span>
-              <div class="small lh-sm fw-semibold" style="color:<%= group.color %>;"><%= group.reasons.join(' · ') %></div>
-            </div>
-          </div>
-        <% }) %>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -257,52 +246,67 @@
   // ─────────────────────────────────────────────────────────────────────────
 
   const AWARD_REASONS = [
-    { label: 'Completed Build/Quest',      amount: 1  },
-    { label: 'Published Community Game',   amount: 1  },
-    { label: 'Daily Activity Challenge',   amount: 1  },
-    { label: 'Creative',                   amount: 1  },
-    { label: 'Impact Level Up',            amount: 2  },
-    { label: 'Got a Stripe',               amount: 2  },
+    { label: 'Completed Build/Quest',      amount: 2  },
+    { label: 'Published Community Game',   amount: 2  },
+    { label: 'Daily Activity Challenge',   amount: 2  },
+    { label: 'Creative',                   amount: 2  },
+    { label: 'Impact Level Up',            amount: 5  },
+    { label: 'Got a Stripe',               amount: 5  },
     { label: 'Belt Up',                    amount: 5  },
     { label: 'Boss Badge',                 amount: 5  },
     { label: 'Birthday',                   amount: 5  },
     { label: 'Ninja of the Month',         amount: 5  },
-    { label: 'Rules of the Dojo',          amount: 5  },
+    { label: 'Rules of the Dojo',          amount: null, variable: true },
     { label: 'Participated in Game Jam',   amount: 10 },
     { label: 'Other',                      amount: null }
   ];
 
   let currentMode = 'award';
-  let selectedReason = null;
+  const selectedReasons = new Map(); // label → reason object
 
   function buildPills() {
     const container = document.getElementById('reasonPills');
     container.innerHTML = '';
     AWARD_REASONS.forEach(r => {
+      const colorClass = r.variable ? 'pill-5' : (r.amount === null ? 'pill-other' : `pill-${r.amount}`);
       const pill = document.createElement('div');
-      const colorClass = r.amount === null ? 'pill-other' : `pill-${r.amount}`;
       pill.className = `reason-pill ${colorClass}`;
-      pill.innerHTML = r.label + (r.amount !== null
-        ? `<span class="nb-badge">+${r.amount}</span>`
-        : `<span class="nb-badge">✏️</span>`);
-      pill.addEventListener('click', () => selectReason(pill, r));
+      let badgeText = r.variable ? '0–5' : (r.amount !== null ? `+${r.amount}` : '✏️');
+      pill.innerHTML = r.label + `<span class="nb-badge">${badgeText}</span>`;
+      pill.dataset.label = r.label;
+      pill.addEventListener('click', () => toggleReason(pill, r));
       container.appendChild(pill);
     });
   }
 
-  function selectReason(pill, reason) {
-    document.querySelectorAll('.reason-pill').forEach(p => p.classList.remove('selected'));
-    pill.classList.add('selected');
-    selectedReason = reason;
-
-    const otherWrap = document.getElementById('otherReasonWrap');
-    if (reason.label === 'Other') {
-      otherWrap.style.display = 'block';
-      document.getElementById('otherReasonText').focus();
+  function toggleReason(pill, reason) {
+    if (selectedReasons.has(reason.label)) {
+      selectedReasons.delete(reason.label);
+      pill.classList.remove('selected');
     } else {
-      otherWrap.style.display = 'none';
-      if (reason.amount !== null) document.getElementById('amount').value = reason.amount;
+      selectedReasons.set(reason.label, reason);
+      pill.classList.add('selected');
     }
+    // Show/hide variable inputs
+    document.getElementById('otherReasonWrap').style.display   = selectedReasons.has('Other')            ? 'block' : 'none';
+    document.getElementById('dojoAmountWrap').style.display    = selectedReasons.has('Rules of the Dojo') ? 'flex'  : 'none';
+    updateTotal();
+    if (reason.label === 'Other') document.getElementById('otherReasonText').focus();
+    if (reason.label === 'Rules of the Dojo') document.getElementById('dojoAmount').focus();
+  }
+
+  function updateTotal() {
+    let total = 0;
+    for (const [label, r] of selectedReasons) {
+      if (label === 'Rules of the Dojo') total += parseInt(document.getElementById('dojoAmount').value) || 0;
+      else if (label === 'Other') total += 0; // user sets amount manually for Other
+      else total += r.amount || 0;
+    }
+    if (selectedReasons.size > 0) document.getElementById('amount').value = total || '';
+    const countEl = document.getElementById('selectedCount');
+    if (countEl) countEl.textContent = selectedReasons.size
+      ? `${selectedReasons.size} reason${selectedReasons.size > 1 ? 's' : ''} selected · +${total} NB`
+      : '';
   }
 
   function setMode(mode) {
@@ -316,7 +320,6 @@
 
     document.getElementById('awardReasonSection').style.display = isRemove ? 'none' : 'block';
     document.getElementById('removeReasonSection').style.display = isRemove ? 'block' : 'none';
-    document.getElementById('legendCard').style.display = isRemove ? 'none' : 'block';
 
     if (isRemove) {
       card.classList.add('remove-mode');
@@ -356,10 +359,12 @@
     if (isRemove) {
       reason = document.getElementById('removeReason').value;
     } else {
-      if (!selectedReason) { showToast('Please select a reason first.', 'warning'); return; }
-      reason = selectedReason.label === 'Other'
-        ? (document.getElementById('otherReasonText').value.trim() || 'Other')
-        : selectedReason.label;
+      if (!selectedReasons.size) { showToast('Please select at least one reason.', 'warning'); return; }
+      const parts = [...selectedReasons.keys()].map(label => {
+        if (label === 'Other') return document.getElementById('otherReasonText').value.trim() || 'Other';
+        return label;
+      });
+      reason = parts.join(' · ');
     }
 
     if (!ninjaName || !amount || amount <= 0) {
@@ -381,10 +386,14 @@
         showToast(isRemove ? `Removed ${amount} NB from ${ninjaName}.` : `${amount} NB awarded to ${ninjaName}!`, isRemove ? 'warning' : 'success');
         document.getElementById('ninjaSearch').value = '';
         document.getElementById('amount').value = '';
+        clearNinjaSearch();
+        selectedReasons.clear();
         document.querySelectorAll('.reason-pill').forEach(p => p.classList.remove('selected'));
         document.getElementById('otherReasonWrap').style.display = 'none';
+        document.getElementById('dojoAmountWrap').style.display = 'none';
         document.getElementById('otherReasonText').value = '';
-        selectedReason = null;
+        document.getElementById('dojoAmount').value = '5';
+        document.getElementById('selectedCount').textContent = '';
       } else {
         showToast('Error: ' + (res.error || 'Ninja not found in leaderboard.'), 'danger');
       }

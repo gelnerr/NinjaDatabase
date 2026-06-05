@@ -304,6 +304,152 @@
           100% { filter: brightness(1); }
         }
       </style>
+      <% } else if (theme === 'deepsea') { %>
+        <!-- Deep Sea Theme -->
+        <link href="https://fonts.googleapis.com/css2?family=Titan+One&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+        <style>
+          :root {
+            --sea-dark: #000d1a;
+            --sea-mid: #001f3f;
+            --sea-glow: #00e5ff;
+            --sea-teal: #0a9396;
+            --sea-biolum: #94d2bd;
+            --sea-gold: #e9c46a;
+          }
+          @keyframes bubbleFloat {
+            0% { transform: translateY(0) scale(1); opacity: 0.6; }
+            100% { transform: translateY(-100vh) scale(1.3); opacity: 0; }
+          }
+          @keyframes seaBreath {
+            0%, 100% { opacity: 0.4; transform: scaleX(1); }
+            50% { opacity: 0.7; transform: scaleX(1.02); }
+          }
+          @keyframes biolumPulse {
+            0%, 100% { box-shadow: 0 10px 0px var(--sea-teal), 0 0 20px rgba(0,229,255,0.2); }
+            50% { box-shadow: 0 10px 0px var(--sea-glow), 0 0 40px rgba(0,229,255,0.5); }
+          }
+          body {
+            background: radial-gradient(ellipse at 20% 80%, #001f3f 0%, #000d1a 60%, #000508 100%);
+            background-attachment: fixed;
+            color: var(--sea-biolum);
+            font-family: 'Nunito', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+          }
+          body::before {
+            content: '';
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background: radial-gradient(ellipse at 60% 30%, rgba(0,229,255,0.06) 0%, transparent 60%),
+                        radial-gradient(ellipse at 10% 70%, rgba(10,147,150,0.08) 0%, transparent 50%);
+            animation: seaBreath 8s ease-in-out infinite;
+          }
+          .header {
+            background: rgba(0, 31, 63, 0.6);
+            border: 2px solid rgba(0,229,255,0.3);
+            border-radius: 20px;
+            backdrop-filter: blur(12px);
+            color: var(--sea-glow);
+          }
+          .kid-card {
+            background: rgba(0, 20, 50, 0.75);
+            border: 3px solid rgba(0,229,255,0.4);
+            border-radius: 20px;
+            box-shadow: 0 10px 0px var(--sea-teal);
+            color: var(--sea-biolum);
+            backdrop-filter: blur(8px);
+            animation: biolumPulse 6s ease-in-out infinite;
+          }
+          .kid-card h2 {
+            color: var(--sea-glow);
+            font-family: 'Titan One';
+            text-shadow: 0 0 15px rgba(0,229,255,0.7);
+          }
+          .activity-item { background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.2); border-radius: 15px; }
+          .activity-info a { color: var(--sea-glow); font-weight: bold; }
+          .event-date { background: var(--sea-teal); color: white; border-radius: 8px; padding: 2px 10px; }
+          .ninja-month-img { border: 3px solid var(--sea-glow); border-radius: 50%; box-shadow: 0 0 15px rgba(0,229,255,0.4); }
+          .vote-btn { background: var(--sea-teal); color: white; font-family: 'Titan One'; border-radius: 50px; }
+          #clock { font-family: 'Titan One'; color: var(--sea-glow); text-shadow: 0 0 20px var(--sea-glow); }
+          .animated { animation: biolumPulse 6s ease-in-out infinite; }
+          .text-muted-theme { color: var(--sea-biolum); opacity: 0.6; }
+          .timer-container { height: 38px; background: rgba(0,229,255,0.1); border: 2px solid rgba(0,229,255,0.3); border-radius: 20px; overflow: hidden; position: relative; flex-grow: 1; margin: 0 20px; }
+          .timer-bar { height: 100%; background: linear-gradient(90deg, var(--sea-teal), var(--sea-glow)); transition: width 1s linear; }
+          .timer-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: white; font-family: 'Titan One'; font-size: 0.85rem; z-index: 2; width: 100%; text-align: center; text-shadow: 0 0 8px var(--sea-glow); }
+          .phase-activity .timer-bar { animation: biolumPulse 1.5s infinite; }
+        </style>
+
+      <% } else if (theme === 'undertale') { %>
+        <!-- Undertale Theme -->
+        <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+        <style>
+          :root {
+            --ut-bg: #000000;
+            --ut-white: #ffffff;
+            --ut-yellow: #ffff00;
+            --ut-red: #ff0000;
+            --ut-cyan: #00ffff;
+            --ut-gray: #888888;
+          }
+          @keyframes heartBeat {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 6px #ff0000); }
+            50% { transform: scale(1.25); filter: drop-shadow(0 0 14px #ff0000); }
+          }
+          @keyframes textFlicker {
+            0%, 100% { opacity: 1; } 92% { opacity: 1; } 93% { opacity: 0.7; } 94% { opacity: 1; }
+          }
+          @keyframes scanline {
+            0% { background-position: 0 0; } 100% { background-position: 0 100px; }
+          }
+          body {
+            background: var(--ut-bg);
+            color: var(--ut-white);
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.75rem;
+            image-rendering: pixelated;
+          }
+          body::after {
+            content: '';
+            position: fixed; inset: 0; pointer-events: none; z-index: 9998;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 4px);
+            animation: scanline 3s linear infinite;
+          }
+          .header {
+            background: var(--ut-bg);
+            border: 4px solid var(--ut-white);
+            border-radius: 0;
+            color: var(--ut-white);
+            image-rendering: pixelated;
+          }
+          .kid-card {
+            background: var(--ut-bg);
+            border: 4px solid var(--ut-white);
+            border-radius: 0;
+            box-shadow: 6px 6px 0 var(--ut-white);
+            color: var(--ut-white);
+          }
+          .kid-card h2 {
+            color: var(--ut-yellow);
+            font-family: 'Press Start 2P';
+            font-size: 1.1rem;
+            text-shadow: 2px 2px 0 var(--ut-red);
+            animation: textFlicker 4s infinite;
+          }
+          .activity-item { background: #111; border: 2px solid var(--ut-white); border-radius: 0; }
+          .activity-info a { color: var(--ut-cyan); text-decoration: none; }
+          .event-date { background: var(--ut-yellow); color: var(--ut-bg); font-family: 'Press Start 2P'; font-size: 0.6rem; padding: 4px 8px; }
+          .ninja-month-img { border: 4px solid var(--ut-white); border-radius: 0; image-rendering: pixelated; }
+          .vote-btn { background: var(--ut-yellow); color: var(--ut-bg); font-family: 'Press Start 2P'; font-size: 0.7rem; border-radius: 0; border: 3px solid var(--ut-white); box-shadow: 4px 4px 0 var(--ut-white); }
+          #clock { font-family: 'Press Start 2P'; color: var(--ut-cyan); font-size: 1.2rem; text-shadow: 2px 2px 0 rgba(0,255,255,0.3); }
+          .animated { animation: none; }
+          .kid-card:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--ut-white); transition: all 0.1s; }
+          .text-muted-theme { color: var(--ut-gray); }
+          .timer-container { height: 36px; background: #111; border: 4px solid var(--ut-white); border-radius: 0; overflow: hidden; position: relative; flex-grow: 1; margin: 0 20px; }
+          .timer-bar { height: 100%; background: var(--ut-yellow); transition: width 1s steps(20, end); }
+          .timer-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: var(--ut-bg); font-family: 'Press Start 2P'; font-size: 0.65rem; z-index: 2; width: 100%; text-align: center; }
+          .phase-activity .timer-bar { background: var(--ut-red); animation: heartBeat 0.5s infinite; }
+          .fun-fact-text::before { content: '* '; color: var(--ut-cyan); }
+        </style>
+
       <% } else { %>
         <!-- Classic Dojo Theme -->
         <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Open+Sans:wght@400;700&display=swap"

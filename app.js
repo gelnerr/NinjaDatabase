@@ -856,6 +856,7 @@ app.post('/admin/update-dashboard', isAuthenticated, upload.any(), async (req, r
   d.activitiesThisWeek = procList('activitiesThisWeek', ['desc', 'url', 'link']).map(a => ({ description: a.desc, image: a.url, link: a.link }));
   d.activitiesNextWeek = procList('activitiesNextWeek', ['desc', 'url', 'link']).map(a => ({ description: a.desc, image: a.url, link: a.link }));
   d.ninjasOfTheMonth = procList('notm', ['name', 'type', 'image']);
+  d.specialEvents = procList('events', ['date', 'text']).map(e => ({ date: e.date, text: e.text })).filter(e => e.text);
   d.notmMonth = b.notmMonth; d.notmColor = b.notmColor; d.funFact = b.funFact; d.senseiOfMonth = b.senseiOfMonth;
   d.theme = b.theme; d.senseiVotingLink = b.senseiVotingLink;
   d.backgroundImage = b.backgroundImage || '';

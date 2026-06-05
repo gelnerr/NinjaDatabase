@@ -14,43 +14,125 @@
       --cn-dark: #231f20;
       --cn-gray: #f5f6f8;
       --cn-border: #eaecf0;
-      --cn-white: #ffffff;
+      --sidebar-w: 240px;
+      --sidebar-collapsed-w: 62px;
     }
     body { background-color: var(--cn-gray); font-family: 'Segoe UI', system-ui, sans-serif; color: #334455; }
-    .sidebar { width: 240px; background: var(--cn-dark); min-height: 100vh; position: fixed; z-index: 1000; transition: all 0.3s; }
-    .main-content { margin-left: 240px; padding: 40px; transition: all 0.3s; min-height: 100vh; }
-    
-    .nav-link { color: #99aabb; padding: 12px 20px; border-radius: 8px; margin: 4px 10px; display: flex; align-items: center; text-decoration: none; transition: all 0.2s; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar-w); background: var(--cn-dark);
+      min-height: 100vh; position: fixed; z-index: 1000;
+      transition: width 0.25s ease; overflow: hidden;
+    }
+    .sidebar.collapsed { width: var(--sidebar-collapsed-w); }
+
+    .sidebar-logo { padding: 18px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; }
+    .sidebar-logo img { transition: opacity 0.2s; flex-shrink: 0; }
+    .sidebar.collapsed .sidebar-logo img { opacity: 0; width: 0; }
+
+    .sidebar-toggle {
+      background: none; border: none; color: #99aabb; cursor: pointer;
+      padding: 4px 6px; border-radius: 6px; flex-shrink: 0; font-size: 1.1rem;
+      transition: color 0.2s, background 0.2s;
+    }
+    .sidebar-toggle:hover { color: white; background: rgba(255,255,255,0.1); }
+
+    .nav-link {
+      color: #99aabb; padding: 10px 18px; border-radius: 8px; margin: 2px 8px;
+      display: flex; align-items: center; text-decoration: none; transition: all 0.2s;
+      white-space: nowrap; overflow: hidden;
+    }
     .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.1); color: white; }
     .nav-link.active { background: var(--cn-blue); }
-    
+    .nav-link i { flex-shrink: 0; width: 20px; text-align: center; font-size: 1rem; }
+    .nav-label { margin-left: 10px; transition: opacity 0.15s; }
+    .sidebar.collapsed .nav-label { opacity: 0; pointer-events: none; }
+    .sidebar.collapsed .nav-link { justify-content: center; padding: 10px; }
+    .sidebar.collapsed hr { margin: 6px 8px; }
+
+    /* ── Main content ── */
+    .main-content { margin-left: var(--sidebar-w); padding: 40px; transition: margin-left 0.25s ease; min-height: 100vh; }
+    .main-content.expanded { margin-left: var(--sidebar-collapsed-w); }
+
     .admin-card { background: white; border-radius: 12px; border: 1px solid var(--cn-border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .page-header { margin-bottom: 30px; }
     .page-title { font-weight: 800; color: var(--cn-dark); letter-spacing: -0.5px; }
   </style>
 </head>
 <body>
-  <div class="sidebar">
-    <div class="p-4 border-bottom border-secondary border-opacity-25 mb-4">
-      <img src="/img/cn_logo.png" height="25" alt="Code Ninjas">
+  <div class="sidebar" id="adminSidebar">
+    <div class="sidebar-logo">
+      <img src="/img/cn_logo.png" height="24" alt="Code Ninjas">
+      <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+        <i class="bi bi-layout-sidebar-reverse" id="sidebarToggleIcon"></i>
+      </button>
     </div>
-    <nav>
-      <a href="/admin" class="nav-link <%= active === 'dashboard' ? 'active' : '' %>"><i class="bi bi-grid-1x2-fill me-2"></i> Dashboard</a>
-      <a href="/admin/update-progress" class="nav-link <%= active === 'progress' ? 'active' : '' %>"><i class="bi bi-graph-up-arrow me-2"></i> Progress</a>
-      <a href="/admin/ninja-bucks-award" class="nav-link <%= active === 'award' ? 'active' : '' %>"><i class="bi bi-coin me-2"></i> Award Bucks</a>
-      <a href="/admin/nb-log" class="nav-link <%= active === 'logs' ? 'active' : '' %>"><i class="bi bi-clock-history me-2"></i> Logs</a>
-      <a href="/admin/master-data" class="nav-link <%= active === 'data' ? 'active' : '' %>"><i class="bi bi-database-fill me-2"></i> Master Data</a>
-      <a href="/admin/progress-matrix" class="nav-link <%= active === 'matrix' ? 'active' : '' %>"><i class="bi bi-grid-3x3-gap-fill me-2"></i> Belt Matrix</a>
-      <hr class="mx-3 border-secondary border-opacity-50">
-      <a href="/admin/dashboard-editor" class="nav-link <%= active === 'editor' ? 'active' : '' %>"><i class="bi bi-pencil-square me-2"></i> Dashboard Settings</a>
-      <a href="/admin/ninjabucks-editor" class="nav-link <%= active === 'nb-editor' ? 'active' : '' %>"><i class="bi bi-coin me-2"></i> Ninja Bucks Settings</a>
-      <a href="/admin/sync-totals" class="nav-link <%= active === 'sync' ? 'active' : '' %>"><i class="bi bi-arrow-left-right me-2"></i> Reconcile Totals</a>
-      <a href="/admin/boss-battle" class="nav-link <%= active === 'boss' ? 'active' : '' %>"><i class="bi bi-lightning-charge-fill me-2"></i> Boss Battle</a>
-      <a href="/admin/backups" class="nav-link <%= active === 'backups' ? 'active' : '' %>"><i class="bi bi-shield-lock me-2"></i> Backups</a>
-      <hr class="mx-3 border-secondary border-opacity-50">
-      <a href="/" target="_blank" class="nav-link opacity-75"><i class="bi bi-eye-fill me-2"></i> View Lobby</a>
-      <a href="/logout" class="nav-link text-danger"><i class="bi bi-box-arrow-right me-2"></i> Logout</a>
+    <nav class="mt-2">
+      <a href="/admin" class="nav-link <%= active === 'dashboard' ? 'active' : '' %>">
+        <i class="bi bi-grid-1x2-fill"></i><span class="nav-label">Dashboard</span>
+      </a>
+      <a href="/admin/update-progress" class="nav-link <%= active === 'progress' ? 'active' : '' %>">
+        <i class="bi bi-graph-up-arrow"></i><span class="nav-label">Update Progress</span>
+      </a>
+      <a href="/admin/ninja-bucks-award" class="nav-link <%= active === 'award' ? 'active' : '' %>">
+        <i class="bi bi-coin"></i><span class="nav-label">Manage NB</span>
+      </a>
+      <a href="/admin/nb-log" class="nav-link <%= active === 'logs' ? 'active' : '' %>">
+        <i class="bi bi-clock-history"></i><span class="nav-label">Logs</span>
+      </a>
+      <a href="/admin/master-data" class="nav-link <%= active === 'data' ? 'active' : '' %>">
+        <i class="bi bi-database-fill"></i><span class="nav-label">Master Data</span>
+      </a>
+      <a href="/admin/progress-matrix" class="nav-link <%= active === 'matrix' ? 'active' : '' %>">
+        <i class="bi bi-trophy-fill"></i><span class="nav-label">Belt Totem</span>
+      </a>
+      <hr class="mx-2 border-secondary border-opacity-25">
+      <a href="/admin/dashboard-editor" class="nav-link <%= active === 'editor' ? 'active' : '' %>">
+        <i class="bi bi-pencil-square"></i><span class="nav-label">Dashboard Settings</span>
+      </a>
+      <a href="/admin/ninjabucks-editor" class="nav-link <%= active === 'nb-editor' ? 'active' : '' %>">
+        <i class="bi bi-coin"></i><span class="nav-label">NB Settings</span>
+      </a>
+      <a href="/admin/sync-totals" class="nav-link <%= active === 'sync' ? 'active' : '' %>">
+        <i class="bi bi-arrow-left-right"></i><span class="nav-label">Reconcile Totals</span>
+      </a>
+      <a href="/admin/boss-battle" class="nav-link <%= active === 'boss' ? 'active' : '' %>">
+        <i class="bi bi-lightning-charge-fill"></i><span class="nav-label">Boss Battle</span>
+      </a>
+      <a href="/admin/backups" class="nav-link <%= active === 'backups' ? 'active' : '' %>">
+        <i class="bi bi-shield-lock"></i><span class="nav-label">Backups</span>
+      </a>
+      <hr class="mx-2 border-secondary border-opacity-25">
+      <a href="/" target="_blank" class="nav-link opacity-75">
+        <i class="bi bi-eye-fill"></i><span class="nav-label">View Lobby</span>
+      </a>
+      <a href="/logout" class="nav-link text-danger">
+        <i class="bi bi-box-arrow-right"></i><span class="nav-label">Logout</span>
+      </a>
     </nav>
   </div>
-  <main class="main-content">
+
+  <main class="main-content" id="mainContent">
     <div class="container-fluid">
+
+<script>
+  (function() {
+    const collapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (collapsed) {
+      document.getElementById('adminSidebar').classList.add('collapsed');
+      document.getElementById('mainContent').classList.add('expanded');
+      document.getElementById('sidebarToggleIcon').className = 'bi bi-layout-sidebar';
+    }
+  })();
+
+  function toggleSidebar() {
+    const sidebar = document.getElementById('adminSidebar');
+    const main = document.getElementById('mainContent');
+    const icon = document.getElementById('sidebarToggleIcon');
+    const isCollapsed = sidebar.classList.toggle('collapsed');
+    main.classList.toggle('expanded', isCollapsed);
+    icon.className = isCollapsed ? 'bi bi-layout-sidebar' : 'bi bi-layout-sidebar-reverse';
+    localStorage.setItem('sidebarCollapsed', isCollapsed);
+  }
+</script>
