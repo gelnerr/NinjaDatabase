@@ -477,7 +477,8 @@
           #clock { font-size: 1.3rem; color: var(--ut-cyan); text-shadow: 2px 2px 0 rgba(0,255,255,0.4); }
           .animated { animation: none; }
           .text-muted-theme { color: var(--ut-gray); }
-          .timer-container { height: 36px; background: #111; border: 4px solid #fff; border-radius: 0; overflow: hidden; position: relative; flex-grow: 1; margin: 0 20px; }
+          .timer-container { height: 52px; background: #111; border: 4px solid #fff; border-radius: 0; overflow: hidden; position: relative; flex-grow: 1; margin: 0 20px; }
+          .timer-text { font-size: 0.7rem; }
           .timer-bar { height: 100%; background: var(--ut-yellow); transition: width 1s steps(30, end); }
           .timer-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: #000; font-size: 0.6rem; z-index: 2; width: 100%; text-align: center; }
           .phase-activity .timer-bar { background: var(--ut-red); animation: utHeartBeat 0.6s infinite; }
@@ -485,22 +486,58 @@
           /* ── Fun Fact typewriter prefix ── */
           .fun-fact-text::before { content: '* '; color: var(--ut-cyan); }
 
-          /* ── Floating SOUL hearts ── */
+          /* ── Pixel-art heart base (box-shadow paints each "pixel") ── */
+          /* Uses CSS custom property --sc (soul colour) so one class works for all colours */
+          .ut-ph { display: block; image-rendering: pixelated; background: var(--sc, #ff0000); }
+
+          /* Large: 10 px per pixel — the fixed player SOUL */
+          .ut-ph-lg {
+            width: 10px; height: 10px;
+            box-shadow:
+              10px 0    0 var(--sc,#f00), 30px 0    0 var(--sc,#f00), 40px 0    0 var(--sc,#f00),
+              -10px 10px 0 var(--sc,#f00), 0   10px 0 var(--sc,#f00), 10px 10px 0 var(--sc,#f00),
+              20px 10px 0 var(--sc,#f00), 30px 10px 0 var(--sc,#f00), 40px 10px 0 var(--sc,#f00),
+              50px 10px 0 var(--sc,#f00),
+              -10px 20px 0 var(--sc,#f00), 0   20px 0 var(--sc,#f00), 10px 20px 0 var(--sc,#f00),
+              20px 20px 0 var(--sc,#f00), 30px 20px 0 var(--sc,#f00), 40px 20px 0 var(--sc,#f00),
+              50px 20px 0 var(--sc,#f00),
+              0   30px 0 var(--sc,#f00), 10px 30px 0 var(--sc,#f00), 20px 30px 0 var(--sc,#f00),
+              30px 30px 0 var(--sc,#f00), 40px 30px 0 var(--sc,#f00),
+              10px 40px 0 var(--sc,#f00), 20px 40px 0 var(--sc,#f00), 30px 40px 0 var(--sc,#f00),
+              20px 50px 0 var(--sc,#f00);
+          }
+
+          /* Small: 4 px per pixel — the floating SOUL particles */
+          .ut-ph-sm {
+            width: 4px; height: 4px;
+            box-shadow:
+              4px 0    0 var(--sc,#f00), 12px 0    0 var(--sc,#f00), 16px 0    0 var(--sc,#f00),
+              -4px 4px  0 var(--sc,#f00), 0   4px  0 var(--sc,#f00), 4px  4px 0 var(--sc,#f00),
+              8px 4px  0 var(--sc,#f00), 12px 4px 0 var(--sc,#f00), 16px 4px 0 var(--sc,#f00),
+              20px 4px 0 var(--sc,#f00),
+              -4px 8px  0 var(--sc,#f00), 0   8px  0 var(--sc,#f00), 4px  8px 0 var(--sc,#f00),
+              8px 8px  0 var(--sc,#f00), 12px 8px 0 var(--sc,#f00), 16px 8px 0 var(--sc,#f00),
+              20px 8px 0 var(--sc,#f00),
+              0   12px 0 var(--sc,#f00), 4px 12px 0 var(--sc,#f00), 8px 12px 0 var(--sc,#f00),
+              12px 12px 0 var(--sc,#f00), 16px 12px 0 var(--sc,#f00),
+              4px 16px 0 var(--sc,#f00), 8px 16px 0 var(--sc,#f00), 12px 16px 0 var(--sc,#f00),
+              8px 20px 0 var(--sc,#f00);
+          }
+
+          /* ── Floating SOUL heart containers ── */
           .ut-soul {
-            position: fixed; bottom: -40px; font-size: 1.1rem;
+            position: fixed; bottom: -30px;
             pointer-events: none; z-index: 2;
             animation: floatSoul linear forwards;
           }
 
-          /* ── Fixed player soul (bottom center) ── */
+          /* ── Fixed player soul (bottom centre) ── */
+          /* 10px/px × 7 cols = 70px wide; base div at col 1 (10px from edge) → left offset = 50% - 35px + 10px = 50% - 25px */
           #ut-player-soul {
-            position: fixed; bottom: 28px; left: 50%;
-            transform: translateX(-50%);
-            font-size: 1.8rem; color: var(--ut-red);
+            position: fixed; bottom: 24px; left: calc(50% - 25px);
             animation: utHeartBeat 1s infinite;
             z-index: 100; pointer-events: none;
-            filter: drop-shadow(0 0 8px #ff0000);
-            text-shadow: none;
+            filter: drop-shadow(0 0 10px #ff0000);
           }
 
           /* ── Save point star ── */
@@ -791,8 +828,10 @@
 <body>
 
 <% if (theme === 'undertale') { %>
-  <!-- Player SOUL — red heart that beats at the bottom of the screen -->
-  <div id="ut-player-soul">❤</div>
+  <!-- Player SOUL — pixel-art red heart that beats at the bottom of the screen -->
+  <div id="ut-player-soul">
+    <div class="ut-ph ut-ph-lg" style="--sc:#ff0000;"></div>
+  </div>
 
   <!-- Rotating save point star -->
   <div id="ut-savepoint">✦</div>
@@ -824,18 +863,26 @@
 
     function spawnSoul() {
       const soul = UT_SOULS[Math.floor(Math.random() * UT_SOULS.length)];
-      const el = document.createElement('span');
-      el.className = 'ut-soul';
-      el.textContent = soul.char;
-      el.style.color = soul.color;
-      el.style.left  = (5 + Math.random() * 90) + 'vw';
-      const drift = (Math.random() - 0.5) * 120;
-      el.style.setProperty('--drift', drift + 'px');
+
+      // Container handles the float animation + position
+      const wrapper = document.createElement('div');
+      wrapper.className = 'ut-soul';
+      // Small heart is 4px/px × 7 cols = 28px wide; base div at col 1 = 4px from edge → offset -4px to left-align
+      wrapper.style.left = (5 + Math.random() * 88) + 'vw';
+      const drift = (Math.random() - 0.5) * 140;
+      wrapper.style.setProperty('--drift', drift + 'px');
       const dur = 7 + Math.random() * 8;
-      el.style.animationDuration = dur + 's';
-      el.style.filter = `drop-shadow(0 0 6px ${soul.color})`;
-      document.body.appendChild(el);
-      setTimeout(() => el.remove(), dur * 1000);
+      wrapper.style.animationDuration = dur + 's';
+      wrapper.style.filter = `drop-shadow(0 0 5px ${soul.color})`;
+
+      // Pixel-art heart
+      const heart = document.createElement('div');
+      heart.className = 'ut-ph ut-ph-sm';
+      heart.style.setProperty('--sc', soul.color);
+      wrapper.appendChild(heart);
+
+      document.body.appendChild(wrapper);
+      setTimeout(() => wrapper.remove(), dur * 1000);
     }
 
     /* Spawn a soul every 1.4 seconds */
