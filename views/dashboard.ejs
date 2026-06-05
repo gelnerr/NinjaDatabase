@@ -532,12 +532,20 @@
           }
 
           /* ── Fixed player soul (bottom centre) ── */
-          /* 10px/px × 7 cols = 70px wide; base div at col 1 (10px from edge) → left offset = 50% - 35px + 10px = 50% - 25px */
+          /* Heart is 7 cols × 6 rows at 10px/px = 70×60px.
+             Wrapper is exactly that size so filter sees the full shape.
+             Base div sits at left:10px inside wrapper (col 1 = 10px from left edge). */
           #ut-player-soul {
-            position: fixed; bottom: 24px; left: calc(50% - 25px);
+            position: fixed;
+            bottom: 20px;
+            left: calc(50% - 35px);   /* centre the 70px wrapper */
+            width: 70px; height: 60px;
             animation: utHeartBeat 1s infinite;
             z-index: 100; pointer-events: none;
-            filter: drop-shadow(0 0 10px #ff0000);
+            filter: drop-shadow(0 0 12px #ff0000);
+          }
+          #ut-player-soul .ut-ph-lg {
+            position: absolute; left: 10px; top: 0;
           }
 
           /* ── Save point star ── */
