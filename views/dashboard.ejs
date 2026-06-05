@@ -383,71 +383,141 @@
         <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
         <style>
           :root {
-            --ut-bg: #000000;
-            --ut-white: #ffffff;
-            --ut-yellow: #ffff00;
-            --ut-red: #ff0000;
-            --ut-cyan: #00ffff;
-            --ut-gray: #888888;
+            --ut-bg: #000000; --ut-white: #ffffff;
+            --ut-yellow: #ffff00; --ut-red: #ff0000;
+            --ut-cyan: #00ffff; --ut-gray: #888888;
+            --ut-orange: #ff8c00; --ut-blue: #4040ff;
+            --ut-purple: #c040ff; --ut-green: #00c000;
           }
-          @keyframes heartBeat {
-            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 6px #ff0000); }
-            50% { transform: scale(1.25); filter: drop-shadow(0 0 14px #ff0000); }
+
+          /* ── Core animations ── */
+          @keyframes utHeartBeat {
+            0%,40%,100% { transform: scale(1);    filter: drop-shadow(0 0 6px #ff0000); }
+            20%,60%     { transform: scale(1.35); filter: drop-shadow(0 0 18px #ff0000); }
           }
           @keyframes textFlicker {
-            0%, 100% { opacity: 1; } 92% { opacity: 1; } 93% { opacity: 0.7; } 94% { opacity: 1; }
+            0%,89%,91%,93%,100% { opacity:1; } 90%,92% { opacity:0.6; }
           }
           @keyframes scanline {
-            0% { background-position: 0 0; } 100% { background-position: 0 100px; }
+            from { background-position: 0 0; } to { background-position: 0 80px; }
           }
+          @keyframes floatSoul {
+            0%   { transform: translateY(0)   translateX(0)    scale(1);    opacity: 0;   }
+            5%   { opacity: 1; }
+            85%  { opacity: 0.8; }
+            100% { transform: translateY(-110vh) translateX(var(--drift)) scale(0.6); opacity: 0; }
+          }
+          @keyframes starTwinkle {
+            0%,100% { opacity:0.2; transform:scale(1); }
+            50%     { opacity:1;   transform:scale(1.4); }
+          }
+          @keyframes savepointSpin {
+            from { transform: rotate(0deg); } to { transform: rotate(360deg); }
+          }
+
+          /* ── Body + background ── */
           body {
-            background: var(--ut-bg);
+            background: #000;
             color: var(--ut-white);
             font-family: 'Press Start 2P', monospace;
             font-size: 0.75rem;
             image-rendering: pixelated;
+            overflow-x: hidden;
           }
+          /* CRT scanlines */
           body::after {
             content: '';
             position: fixed; inset: 0; pointer-events: none; z-index: 9998;
-            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 4px);
-            animation: scanline 3s linear infinite;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 4px);
+            animation: scanline 4s linear infinite;
           }
+
+          /* ── Header ── */
           .header {
-            background: var(--ut-bg);
-            border: 4px solid var(--ut-white);
+            background: #000;
+            border: 4px solid #fff;
             border-radius: 0;
-            color: var(--ut-white);
-            image-rendering: pixelated;
+            color: #fff;
           }
+
+          /* ── Cards (battle dialogue boxes) ── */
           .kid-card {
-            background: var(--ut-bg);
+            background: #000;
             border: 4px solid var(--ut-white);
             border-radius: 0;
             box-shadow: 6px 6px 0 var(--ut-white);
             color: var(--ut-white);
+            position: relative;
           }
+          /* Pixel corner decorations — mimics Undertale battle box corners */
+          .kid-card::before, .kid-card::after {
+            content: '';
+            position: absolute;
+            width: 8px; height: 8px;
+            background: var(--ut-white);
+          }
+          .kid-card::before { top: -4px;  left: -4px; }
+          .kid-card::after  { bottom: -4px; right: -4px; }
           .kid-card h2 {
             color: var(--ut-yellow);
-            font-family: 'Press Start 2P';
-            font-size: 1.1rem;
+            font-size: 1rem;
             text-shadow: 2px 2px 0 var(--ut-red);
-            animation: textFlicker 4s infinite;
+            animation: textFlicker 5s infinite;
           }
-          .activity-item { background: #111; border: 2px solid var(--ut-white); border-radius: 0; }
-          .activity-info a { color: var(--ut-cyan); text-decoration: none; }
-          .event-date { background: var(--ut-yellow); color: var(--ut-bg); font-family: 'Press Start 2P'; font-size: 0.6rem; padding: 4px 8px; }
-          .ninja-month-img { border: 4px solid var(--ut-white); border-radius: 0; image-rendering: pixelated; }
-          .vote-btn { background: var(--ut-yellow); color: var(--ut-bg); font-family: 'Press Start 2P'; font-size: 0.7rem; border-radius: 0; border: 3px solid var(--ut-white); box-shadow: 4px 4px 0 var(--ut-white); }
-          #clock { font-family: 'Press Start 2P'; color: var(--ut-cyan); font-size: 1.2rem; text-shadow: 2px 2px 0 rgba(0,255,255,0.3); }
+          .kid-card:hover { transform: translate(-2px,-2px); box-shadow: 8px 8px 0 #fff; transition: all 0.08s steps(2); }
+
+          /* ── Activities / items ── */
+          .activity-item { background: #0a0a0a; border: 2px solid #fff; border-radius: 0; }
+          .activity-info a { color: var(--ut-cyan); }
+          .event-date { background: var(--ut-yellow); color: #000; font-size: 0.55rem; padding: 4px 8px; }
+          .ninja-month-img { border: 4px solid #fff; border-radius: 0; image-rendering: pixelated; }
+          .vote-btn { background: var(--ut-yellow); color: #000; font-size: 0.65rem; border-radius: 0; border: 3px solid #fff; box-shadow: 4px 4px 0 #fff; }
+
+          /* ── Clock + timer ── */
+          #clock { font-size: 1.3rem; color: var(--ut-cyan); text-shadow: 2px 2px 0 rgba(0,255,255,0.4); }
           .animated { animation: none; }
-          .kid-card:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--ut-white); transition: all 0.1s; }
           .text-muted-theme { color: var(--ut-gray); }
-          .timer-container { height: 36px; background: #111; border: 4px solid var(--ut-white); border-radius: 0; overflow: hidden; position: relative; flex-grow: 1; margin: 0 20px; }
-          .timer-bar { height: 100%; background: var(--ut-yellow); transition: width 1s steps(20, end); }
-          .timer-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: var(--ut-bg); font-family: 'Press Start 2P'; font-size: 0.65rem; z-index: 2; width: 100%; text-align: center; }
-          .phase-activity .timer-bar { background: var(--ut-red); animation: heartBeat 0.5s infinite; }
+          .timer-container { height: 36px; background: #111; border: 4px solid #fff; border-radius: 0; overflow: hidden; position: relative; flex-grow: 1; margin: 0 20px; }
+          .timer-bar { height: 100%; background: var(--ut-yellow); transition: width 1s steps(30, end); }
+          .timer-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: #000; font-size: 0.6rem; z-index: 2; width: 100%; text-align: center; }
+          .phase-activity .timer-bar { background: var(--ut-red); animation: utHeartBeat 0.6s infinite; }
+
+          /* ── Fun Fact typewriter prefix ── */
           .fun-fact-text::before { content: '* '; color: var(--ut-cyan); }
+
+          /* ── Floating SOUL hearts ── */
+          .ut-soul {
+            position: fixed; bottom: -40px; font-size: 1.1rem;
+            pointer-events: none; z-index: 2;
+            animation: floatSoul linear forwards;
+          }
+
+          /* ── Fixed player soul (bottom center) ── */
+          #ut-player-soul {
+            position: fixed; bottom: 28px; left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.8rem; color: var(--ut-red);
+            animation: utHeartBeat 1s infinite;
+            z-index: 100; pointer-events: none;
+            filter: drop-shadow(0 0 8px #ff0000);
+            text-shadow: none;
+          }
+
+          /* ── Save point star ── */
+          #ut-savepoint {
+            position: fixed; top: 20px; right: 24px;
+            font-size: 1.6rem; color: var(--ut-yellow);
+            animation: savepointSpin 4s linear infinite, starTwinkle 2s ease-in-out infinite;
+            z-index: 100; pointer-events: none;
+            filter: drop-shadow(0 0 10px #ffff00);
+          }
+
+          /* ── Pixel stars background ── */
+          .ut-star {
+            position: fixed; color: #fff; font-size: 0.5rem;
+            pointer-events: none; z-index: 1;
+            animation: starTwinkle ease-in-out infinite;
+          }
         </style>
 
       <% } else { %>
@@ -719,6 +789,61 @@
 </head>
 
 <body>
+
+<% if (theme === 'undertale') { %>
+  <!-- Player SOUL — red heart that beats at the bottom of the screen -->
+  <div id="ut-player-soul">❤</div>
+
+  <!-- Rotating save point star -->
+  <div id="ut-savepoint">✦</div>
+
+  <script>
+    /* Spawn random SOUL hearts that float up the screen */
+    const UT_SOULS = [
+      { char: '❤', color: '#ff0000' }, // Determination (red)
+      { char: '❤', color: '#ff8c00' }, // Bravery (orange)
+      { char: '❤', color: '#ffff00' }, // Justice (yellow)
+      { char: '❤', color: '#00c000' }, // Kindness (green)
+      { char: '❤', color: '#4040ff' }, // Integrity (blue)
+      { char: '❤', color: '#c040ff' }, // Perseverance (purple)
+      { char: '❤', color: '#00ffff' }, // Patience (cyan)
+    ];
+
+    /* Scatter a small handful of pixel stars on load */
+    for (let i = 0; i < 28; i++) {
+      const star = document.createElement('span');
+      star.className = 'ut-star';
+      star.textContent = ['✦','✧','·','*'][Math.floor(Math.random()*4)];
+      star.style.left = Math.random() * 100 + 'vw';
+      star.style.top  = Math.random() * 100 + 'vh';
+      star.style.animationDuration = (2 + Math.random() * 4) + 's';
+      star.style.animationDelay    = (Math.random() * 4) + 's';
+      star.style.opacity = 0.3 + Math.random() * 0.5;
+      document.body.appendChild(star);
+    }
+
+    function spawnSoul() {
+      const soul = UT_SOULS[Math.floor(Math.random() * UT_SOULS.length)];
+      const el = document.createElement('span');
+      el.className = 'ut-soul';
+      el.textContent = soul.char;
+      el.style.color = soul.color;
+      el.style.left  = (5 + Math.random() * 90) + 'vw';
+      const drift = (Math.random() - 0.5) * 120;
+      el.style.setProperty('--drift', drift + 'px');
+      const dur = 7 + Math.random() * 8;
+      el.style.animationDuration = dur + 's';
+      el.style.filter = `drop-shadow(0 0 6px ${soul.color})`;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), dur * 1000);
+    }
+
+    /* Spawn a soul every 1.4 seconds */
+    spawnSoul();
+    setInterval(spawnSoul, 1400);
+  </script>
+<% } %>
+
   <div class="header">
     <div class="d-flex align-items-center gap-4">
       <div class="logo-container"
