@@ -1059,7 +1059,12 @@
   <% if (bossActive) { %>
   <div id="bossOverlay" onclick="closeBossOverlay()" style="
     display: none; position: fixed; inset: 0; z-index: 9999;
-    background: #000; overflow: hidden; cursor: pointer;
+    background-color: #000;<% if (backgroundImage) { %>
+    background-image: url('<%= backgroundImage %>');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;<% } %>
+    overflow: hidden; cursor: pointer;
   ">
     <!-- Side panels -->
     <div id="bossLeftPanel" style="

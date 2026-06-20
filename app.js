@@ -947,23 +947,25 @@ app.post('/admin/sync-totals', isAuthenticated, async (req, res) => {
 
 app.get('/admin/ninja-bucks-award', isAuthenticated, async (req, res) => res.render('ninja-bucks-award', { leaderboard: (await getDashboardData()).leaderboard }));
 app.post('/admin/update-ninja-bucks', isAuthenticated, async (req, res) => {
-  const d = await getDashboardData();
   const { ninjaName, amount, reason } = req.body;
   const parsedAmount = parseInt(amount);
-  const n = d.leaderboard.find(x => x.name === ninjaName);
-  if (!n) return res.status(404).json({ error: 'Not found in leaderboard' });
 
-  n.total += parsedAmount; d.markModified('leaderboard');
-  // n.total is already the new value — do NOT add parsedAmount again
+  // Ninja.totalNinjaBucks is the source of truth (what Reconcile compares against),
+  // so it must drive every other total — not the leaderboard cache.
+  const ninja = await Ninja.findOneAndUpdate({ name: ninjaName }, { $inc: { totalNinjaBucks: parsedAmount } }, { new: true });
+  if (!ninja) return res.status(404).json({ error: 'Ninja not found' });
+
+  const d = await getDashboardData();
+  const n = d.leaderboard.find(x => x.name === ninjaName);
+  if (n) { n.total = ninja.totalNinjaBucks; d.markModified('leaderboard'); }
 
   await Promise.all([
     d.save(),
     NBLog.create({ ninjaName, buttonAction: reason, amount: parsedAmount }),
-    Ninja.findOneAndUpdate({ name: ninjaName }, { $inc: { totalNinjaBucks: parsedAmount } }, { new: true }),
-    pushNBToSheets(ninjaName, parsedAmount, reason, n.total).catch(e => console.error('[Sheets] NB push failed:', e.message))
+    pushNBToSheets(ninjaName, parsedAmount, reason, ninja.totalNinjaBucks).catch(e => console.error('[Sheets] NB push failed:', e.message))
   ]);
 
-  res.json({ success: true, newTotal: n.total });
+  res.json({ success: true, newTotal: ninja.totalNinjaBucks });
 });
 
 app.post('/admin/nb-log/delete/:id', isAuthenticated, async (req, res) => {
