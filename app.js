@@ -1126,6 +1126,25 @@ app.get('/admin/test-sheets', isAuthenticated, async (req, res) => {
         return res.json({ steps, success: false });
       }
 
+      // 7. Boss Battle tab present + boss HP write test (pushBossHPToSheets writes to Boss Battle!F1)
+      const hasBossTab = sheetNames.includes('Boss Battle');
+      step('Boss Battle sheet tab present', hasBossTab,
+        hasBossTab ? 'Found "Boss Battle" tab' : `Missing "Boss Battle" tab — found: ${sheetNames.join(', ')}. pushBossHPToSheets writes to "Boss Battle!F1" and will silently no-op without this exact tab name.`);
+      if (hasBossTab) {
+        try {
+          await sheets.spreadsheets.values.update({
+            spreadsheetId: d.mainSpreadsheetId, range: 'Boss Battle!F1',
+            valueInputOption: 'RAW', requestBody: { values: [[d.bossHP]] }
+          });
+          const readBack = await sheets.spreadsheets.values.get({ spreadsheetId: d.mainSpreadsheetId, range: 'Boss Battle!F1' });
+          const writtenVal = readBack.data.values?.[0]?.[0];
+          step('Boss HP write to Boss Battle!F1 confirmed', String(writtenVal) === String(d.bossHP),
+            `Wrote current bossHP (${d.bossHP}) to F1, read back: ${writtenVal}`);
+        } catch(e) {
+          step('Boss HP write to Boss Battle!F1 confirmed', false, e.message);
+        }
+      }
+
       return res.json({ steps, success: true });
     } catch(e) {
       step('Main spreadsheet accessible', false,
@@ -1134,6 +1153,51 @@ app.get('/admin/test-sheets', isAuthenticated, async (req, res) => {
     }
   } catch(e) {
     step('Unexpected error', false, e.message);
+    return res.json({ steps, success: false });
+  }
+});
+
+app.post('/admin/test-discord', isAuthenticated, async (req, res) => {
+  const steps = [];
+  const step = (label, ok, detail) => steps.push({ label, ok, detail: detail || null });
+
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  step('DISCORD_WEBHOOK_URL set', !!webhookUrl,
+    webhookUrl ? `${webhookUrl.length} chars — remember: editing .env requires a server restart to take effect` : 'NOT SET — add DISCORD_WEBHOOK_URL to .env and restart the server');
+  if (!webhookUrl) return res.json({ steps, success: false });
+
+  let url;
+  try { url = new URL(webhookUrl); step('Webhook URL is well-formed', true, url.hostname); }
+  catch(e) { step('Webhook URL is well-formed', false, e.message); return res.json({ steps, success: false }); }
+
+  try {
+    const https = require('https');
+    const payload = JSON.stringify({
+      content: `🔧 **Test message from Code Ninjas Dashboard** — if you can see this, your webhook is correctly pointed at this channel. (sent ${new Date().toLocaleString('en-US', { timeZone: 'America/Regina' })})`
+    });
+    const result = await new Promise((resolve) => {
+      const r = https.request({
+        hostname: url.hostname, path: url.pathname + url.search, method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+      }, (resp) => {
+        let body = '';
+        resp.on('data', c => body += c);
+        resp.on('end', () => resolve({ status: resp.statusCode, body }));
+      });
+      r.on('error', (e) => resolve({ status: 0, body: e.message }));
+      r.write(payload); r.end();
+    });
+
+    const ok = result.status >= 200 && result.status < 300;
+    let detail;
+    if (ok) detail = `Status ${result.status} — go check the Discord channel now`;
+    else if (result.status === 404) detail = `404 Unknown Webhook — this webhook was deleted (this happens when a channel is removed/recreated). Create a new webhook in the current channel and replace DISCORD_WEBHOOK_URL.`;
+    else if (result.status === 401) detail = '401 Unauthorized — the webhook token in the URL is invalid';
+    else detail = `Status ${result.status}: ${result.body}`;
+    step('Message posted to Discord', ok, detail);
+    return res.json({ steps, success: ok });
+  } catch(e) {
+    step('Message posted to Discord', false, e.message);
     return res.json({ steps, success: false });
   }
 });

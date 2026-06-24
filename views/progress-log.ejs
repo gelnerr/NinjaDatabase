@@ -5,9 +5,19 @@
     <h2 class="page-title">Belt Advancement History</h2>
     <p class="text-muted mb-0">Chronological history of ninja rank updates.</p>
   </div>
-  <button class="btn btn-primary rounded-pill px-4" onclick="postToDiscord()">
-    <i class="bi bi-discord me-2"></i> Post Pending to Discord
-  </button>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-secondary rounded-pill px-4" onclick="testDiscordWebhook()" id="discordTestBtn">
+      <i class="bi bi-broadcast me-2"></i> Test Discord Webhook
+    </button>
+    <button class="btn btn-primary rounded-pill px-4" onclick="postToDiscord()">
+      <i class="bi bi-discord me-2"></i> Post Pending to Discord
+    </button>
+  </div>
+</div>
+
+<div id="discordTestResults" class="admin-card p-4 shadow-sm mb-4" style="display:none;">
+  <div id="discordTestList" class="mb-2"></div>
+  <div id="discordTestSummary" class="small fw-bold mt-2 p-3 rounded-3"></div>
 </div>
 
 <div class="admin-card overflow-hidden shadow-sm">
@@ -77,6 +87,48 @@
 </style>
 
 <script>
+  async function testDiscordWebhook() {
+    const btn = document.getElementById('discordTestBtn');
+    const results = document.getElementById('discordTestResults');
+    const list = document.getElementById('discordTestList');
+    const summary = document.getElementById('discordTestSummary');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Testing...';
+    results.style.display = 'none';
+
+    try {
+      const res = await fetch('/admin/test-discord', { method: 'POST' });
+      const data = await res.json();
+
+      list.innerHTML = data.steps.map(s => `
+        <div class="d-flex align-items-start gap-2 mb-2">
+          <span class="mt-1">${s.ok ? '✅' : '❌'}</span>
+          <div>
+            <div class="small fw-bold ${s.ok ? 'text-dark' : 'text-danger'}">${s.label}</div>
+            ${s.detail ? `<div class="small text-muted" style="word-break:break-all;">${s.detail}</div>` : ''}
+          </div>
+        </div>
+      `).join('');
+
+      if (data.success) {
+        summary.className = 'small fw-bold mt-2 p-3 rounded-3 bg-success bg-opacity-10 text-success border border-success border-opacity-25';
+        summary.textContent = '✅ Test message sent — check your Discord channel to confirm it landed in the right place.';
+      } else {
+        const failed = data.steps.find(s => !s.ok);
+        summary.className = 'small fw-bold mt-2 p-3 rounded-3 bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25';
+        summary.textContent = `❌ Failed at: "${failed?.label}". See detail above.`;
+      }
+      results.style.display = 'block';
+    } catch(e) {
+      list.innerHTML = `<div class="text-danger small">Network error: ${e.message}</div>`;
+      results.style.display = 'block';
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-broadcast me-2"></i> Test Discord Webhook';
+  }
+
   async function postToDiscord() {
     if(!confirm('Post all pending belt updates to Discord?')) return;
     try {
