@@ -113,7 +113,7 @@ const sendDiscordNotification = async (ninjaName, oldBelt, newBelt, notes) => {
   const oldE = emojis[oldBelt] || '⚪';
   const newE = emojis[newBelt] || '⚪';
   
-  const message = `🥋 **Belt Advancement!**\n**${ninjaName}** has leveled up!\n\n${oldE} **${oldBelt}**  ➡️  ${newE} **${newBelt}**\n\n_${notes || 'Manual Update'}_`;
+  const message = `🥋 **${ninjaName}** has belted up! ${oldE} ${oldBelt}  ➡️  ${newE} ${newBelt}`;
   const data = JSON.stringify({ content: message });
   const url = new URL(webhookUrl);
   const https = require('https');
