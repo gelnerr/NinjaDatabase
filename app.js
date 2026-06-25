@@ -179,6 +179,19 @@ const findSheetRow = async (sheets, spreadsheetId, sheetName, col, name) => {
   return idx === -1 ? null : idx + 1;
 };
 
+// data!B is a protected =SUM(F{row}:{row}) formula — code must NEVER write a literal
+// value there. The website only ever adjusts column F (Added/Subtracted), read-modify-write.
+const applyDeltaToSheetTotal = async (sheets, sid, row, delta) => {
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: `data!F${row}` });
+  const current = parseInt(res.data.values?.[0]?.[0]) || 0;
+  const updated = current + delta;
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: sid, range: `data!F${row}`,
+    valueInputOption: 'RAW', requestBody: { values: [[updated]] }
+  });
+  return updated;
+};
+
 // Push an NB transaction to the NB Log sheet and update the ninja's total in the data sheet
 const pushNBToSheets = async (ninjaName, amount, reason, newTotal) => {
   try {
@@ -198,15 +211,12 @@ const pushNBToSheets = async (ninjaName, amount, reason, newTotal) => {
       requestBody: { values: [[sheetDate(), ninjaName, reason, amtStr]] }
     });
 
-    // Update running total in data sheet column F
+    // Apply the delta to column F — see applyDeltaToSheetTotal note above
     const row = await findSheetRow(sheets, sid, 'data', 'A', ninjaName);
     if (row) {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: sid, range: `data!B${row}`,
-        valueInputOption: 'RAW', requestBody: { values: [[newTotal]] }
-      });
+      const newF = await applyDeltaToSheetTotal(sheets, sid, row, amount);
+      console.log(`[Sheets] NB sync: ${ninjaName} ${amtStr} → F${row} now ${newF} (Mongo total: ${newTotal})`);
     }
-    console.log(`[Sheets] NB sync: ${ninjaName} ${amtStr} → total ${newTotal}`);
   } catch(e) { console.error('[Sheets] pushNBToSheets error:', e.message); }
 };
 
@@ -352,13 +362,11 @@ const deleteFromNBLogSheet = async (ninjaName, amount, reason, newNinjaTotal) =>
       }
     }
 
-    // Always update the running total in data sheet
+    // Reverse the delta in column F — see applyDeltaToSheetTotal note above
     const row = await findSheetRow(sheets, sid, 'data', 'A', ninjaName);
     if (row) {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: sid, range: `data!B${row}`,
-        valueInputOption: 'RAW', requestBody: { values: [[newNinjaTotal]] }
-      });
+      const newF = await applyDeltaToSheetTotal(sheets, sid, row, -amount);
+      console.log(`[Sheets] NB Log delete: reversed ${amount} for ${ninjaName} → F${row} now ${newF} (Mongo total: ${newNinjaTotal})`);
     }
   } catch(e) { console.error('[Sheets] deleteFromNBLogSheet error:', e.message); }
 };
@@ -1205,6 +1213,76 @@ app.post('/admin/test-discord', isAuthenticated, async (req, res) => {
   } catch(e) {
     step('Message posted to Discord', false, e.message);
     return res.json({ steps, success: false });
+  }
+});
+
+// One-time repair: past code wrote literal totals into data!B, clobbering its
+// =SUM(F{row}:{row}) formula. Column F was never touched by that bug, so it's
+// been frozen at its old pre-bug value this whole time — every NB award/removal
+// since then is missing from it. Naively restoring the formula would silently
+// revert every corrupted ninja back to their stale pre-bug total.
+//
+// Fix: only touch rows where B is actually NOT a formula right now (detected via
+// FORMULA render option, so already-healthy rows are never touched). For each
+// corrupted row, back-solve F so the restored formula reproduces MongoDB's
+// current totalNinjaBucks exactly (Mongo is the reconciled source of truth):
+//   F_new = Mongo.totalNinjaBucks - sum(columns G onward in that row)
+// Row 1 (header) is never touched.
+app.post('/admin/repair-data-formulas', isAuthenticated, async (req, res) => {
+  try {
+    const d = await getDashboardData();
+    if (!d?.mainSpreadsheetId) return res.json({ success: false, error: 'Operational spreadsheet ID not configured' });
+    const sheets = await getSheetClient();
+    if (!sheets) return res.json({ success: false, error: 'Could not create Sheets client' });
+    const sid = d.mainSpreadsheetId;
+
+    const aRes = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'data!A2:A1000' });
+    const names = (aRes.data.values || []).map(r => r[0]?.trim() || '');
+
+    // FORMULA render option returns the literal formula text instead of the computed
+    // value — a healthy cell looks like "=SUM(F17:17)", a corrupted one is just a number.
+    const bRes = await sheets.spreadsheets.values.get({
+      spreadsheetId: sid, range: 'data!B2:B1000', valueRenderOption: 'FORMULA'
+    });
+    const bCells = bRes.data.values || [];
+
+    const corruptedRows = [];
+    names.forEach((name, i) => {
+      if (!name) return;
+      const row = i + 2;
+      const bVal = bCells[i]?.[0];
+      const isFormula = typeof bVal === 'string' && bVal.trim().startsWith('=');
+      if (!isFormula) corruptedRows.push({ row, name });
+    });
+
+    if (corruptedRows.length === 0) return res.json({ success: true, rowsFixed: 0, fixed: [], skipped: [] });
+
+    const fixed = [];
+    const skipped = [];
+    for (const { row, name } of corruptedRows) {
+      const ninja = await Ninja.findOne({ name });
+      if (!ninja) { skipped.push({ row, name, reason: 'Not found in MongoDB' }); continue; }
+
+      // Sum everything from G onward in this row (the legacy/monthly columns) —
+      // same open-ended row notation Sheets itself uses for the formula.
+      const rowRes = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: `data!G${row}:${row}` });
+      const legacySum = (rowRes.data.values?.[0] || []).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+
+      const newF = ninja.totalNinjaBucks - legacySum;
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: sid, range: `data!F${row}`,
+        valueInputOption: 'RAW', requestBody: { values: [[newF]] }
+      });
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: sid, range: `data!B${row}`,
+        valueInputOption: 'USER_ENTERED', requestBody: { values: [[`=SUM(F${row}:${row})`]] }
+      });
+      fixed.push({ row, name, mongoTotal: ninja.totalNinjaBucks, legacySum, newF });
+    }
+
+    res.json({ success: true, rowsFixed: fixed.length, fixed, skipped });
+  } catch(e) {
+    res.json({ success: false, error: e.message });
   }
 });
 
