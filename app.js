@@ -542,7 +542,13 @@ app.get('/admin/buttons', isAuthenticated, async (req, res) => {
   res.render('buttons', { ninjas });
 });
 
-app.get('/admin/update-progress', isAuthenticated, async (req, res) => res.render('update-progress', { ninjas: await Ninja.find({ isActive: true }).sort({ name: 1 }) }));
+app.get('/admin/update-progress', isAuthenticated, async (req, res) => {
+  const [ninjas, recentLogs] = await Promise.all([
+    Ninja.find({ isActive: true }).sort({ name: 1 }),
+    ProgressLog.find({}).sort({ date: -1 }).limit(5)
+  ]);
+  res.render('update-progress', { ninjas, recentLogs });
+});
 app.post('/admin/ninjas/:id/update-belt', isAuthenticated, async (req, res) => {
   const n = await Ninja.findById(req.params.id);
   const old = n.currentBelt; 

@@ -36,6 +36,24 @@
         <% }); %>
       </div>
     </div>
+
+    <div class="admin-card p-4 shadow-sm">
+      <label class="form-label fw-bold text-dark mb-3">Recent Activity</label>
+      <div id="recentLogsList" class="list-group list-group-flush">
+        <% recentLogs.forEach(log => { %>
+          <div class="list-group-item px-0 py-2 border-0 border-bottom d-flex justify-content-between align-items-center">
+            <div>
+              <span class="fw-bold small"><%= log.ninjaName %></span>
+              <span class="text-muted small"><%= log.oldBelt || '—' %> → <%= log.newBelt %></span>
+            </div>
+            <span class="text-muted" style="font-size: 0.7rem;"><%= new Date(log.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
+          </div>
+        <% }); %>
+        <% if (recentLogs.length === 0) { %>
+          <div id="noRecentLogs" class="text-muted small py-2">No progress logged yet.</div>
+        <% } %>
+      </div>
+    </div>
   </div>
 
   <div class="col-lg-7">
@@ -87,6 +105,9 @@
 
 <style>
   .border-dashed { border-style: dashed !important; border-width: 2px !important; }
+  /* .d-flex on .ninja-item is display:flex !important, so a plain inline style
+     can never hide it — needs a class with higher specificity to win. */
+  .ninja-item.search-hidden { display: none !important; }
   .ninja-item.active { background-color: var(--cn-blue) !important; color: white !important; border-color: var(--cn-blue) !important; }
   .ninja-item.active .badge { background: rgba(255,255,255,0.2) !important; color: white !important; border-color: rgba(255,255,255,0.3) !important; }
   .btn-check:checked + label { background-color: var(--cn-blue) !important; border-color: var(--cn-blue) !important; color: white !important; box-shadow: 0 4px 10px rgba(53,142,188,0.3); }
@@ -99,7 +120,7 @@
     const q = document.getElementById('ninjaSearch').value.toLowerCase();
     document.querySelectorAll('.ninja-item').forEach(item => {
       const name = item.querySelector('.fw-bold').textContent.toLowerCase();
-      item.style.display = name.includes(q) ? 'flex' : 'none';
+      item.classList.toggle('search-hidden', !name.includes(q));
     });
   }
 
@@ -150,16 +171,38 @@
         const activeBtn = document.querySelector('.ninja-item.active .badge');
         if (activeBtn) activeBtn.textContent = newBelt;
         document.getElementById('displayCurrentBelt').textContent = newBelt;
+        const oldBelt = selectedNinja.currentBelt;
         selectedNinja.currentBelt = newBelt;
         // Re-select the new belt radio
         const beltId = `belt_${newBelt.toLowerCase().replace(/ /g, '_')}`;
         const radio = document.getElementById(beltId);
         if (radio) radio.checked = true;
+        prependRecentLog(selectedNinja.name, oldBelt, newBelt);
       } else {
         showToast('Error saving progress.', 'danger');
       }
     } catch (e) { showToast('Network error.', 'danger'); }
     finally { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check2-circle me-2"></i> Confirm Advancement'; }
+  }
+
+  function prependRecentLog(ninjaName, oldBelt, newBelt) {
+    const list = document.getElementById('recentLogsList');
+    document.getElementById('noRecentLogs')?.remove();
+
+    const row = document.createElement('div');
+    row.className = 'list-group-item px-0 py-2 border-0 border-bottom d-flex justify-content-between align-items-center';
+    row.innerHTML = `
+      <div>
+        <span class="fw-bold small"></span>
+        <span class="text-muted small"></span>
+      </div>
+      <span class="text-muted" style="font-size: 0.7rem;">${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+    `;
+    row.querySelector('.fw-bold').textContent = ninjaName;
+    row.querySelector('.text-muted.small').textContent = `${oldBelt || '—'} → ${newBelt}`;
+    list.insertBefore(row, list.firstChild);
+
+    while (list.children.length > 5) list.removeChild(list.lastChild);
   }
 </script>
 
