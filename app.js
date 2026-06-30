@@ -485,6 +485,16 @@ app.post('/api/sheets-webhook', async (req, res) => {
       return res.json({ success: true, newHP: d.bossHP });
     }
 
+    if (type === 'boss_hp_sync') {
+      const hp = parseInt(req.body.hp);
+      if (isNaN(hp)) return res.status(400).json({ error: 'Invalid hp value' });
+      const d = await getDashboardData();
+      d.bossHP = Math.max(0, Math.min(d.bossMaxHP, hp));
+      await d.save();
+      console.log(`[Webhook] Boss HP synced to ${d.bossHP}`);
+      return res.json({ success: true, newHP: d.bossHP });
+    }
+
     return res.status(400).json({ error: `Unknown event type: ${type}` });
   } catch(e) {
     console.error('[Webhook] Error:', e.message);
@@ -1223,7 +1233,7 @@ app.post('/admin/test-discord', isAuthenticated, async (req, res) => {
 // revert every corrupted ninja back to their stale pre-bug total.
 //
 // Fix: only touch rows where B is actually NOT a formula right now (detected via
-// FORMULA render option, so already-healthy rows are never touched). For each
+// FORMULA rendxer option, so already-healthy rows are never touched). For each
 // corrupted row, back-solve F so the restored formula reproduces MongoDB's
 // current totalNinjaBucks exactly (Mongo is the reconciled source of truth):
 //   F_new = Mongo.totalNinjaBucks - sum(columns G onward in that row)

@@ -2,3 +2,4 @@ node_modules
 .DS_Store
 .env
 credentials.json
+apps-script.txt
