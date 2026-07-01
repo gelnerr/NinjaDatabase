@@ -485,12 +485,31 @@ app.post('/api/sheets-webhook', async (req, res) => {
       return res.json({ success: true, newHP: d.bossHP });
     }
 
-    if (type === 'boss_hp_sync') {
-      const hp = parseInt(req.body.hp);
-      if (isNaN(hp)) return res.status(400).json({ error: 'Invalid hp value' });
+    if (type === 'boss_attack') {
+      const damage = parseInt(req.body.damage) || 0;
+      if (damage <= 0) return res.status(400).json({ error: 'Invalid damage value' });
       const d = await getDashboardData();
-      d.bossHP = Math.max(0, Math.min(d.bossMaxHP, hp));
+      d.bossHP = Math.max(0, d.bossHP - damage);
       await d.save();
+      pushBossHPToSheets(d.bossHP).catch(() => {});
+      console.log(`[Webhook] Boss attacked for ${damage}, HP now ${d.bossHP}`);
+      return res.json({ success: true, newHP: d.bossHP });
+    }
+
+    if (type === 'boss_hp_sync') {
+      const d = await getDashboardData();
+      let newHP;
+      if (req.body.totalDamage !== undefined) {
+        // Recompute from total damage sum — used by syncBossHP() reconcile tool
+        newHP = Math.max(0, d.bossMaxHP - (parseInt(req.body.totalDamage) || 0));
+      } else {
+        const hp = parseInt(req.body.hp);
+        if (isNaN(hp)) return res.status(400).json({ error: 'Invalid hp value' });
+        newHP = Math.max(0, Math.min(d.bossMaxHP, hp));
+      }
+      d.bossHP = newHP;
+      await d.save();
+      pushBossHPToSheets(d.bossHP).catch(() => {});
       console.log(`[Webhook] Boss HP synced to ${d.bossHP}`);
       return res.json({ success: true, newHP: d.bossHP });
     }
