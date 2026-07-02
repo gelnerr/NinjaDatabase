@@ -236,6 +236,13 @@ const pushBeltToSheets = async (ninjaName, oldBelt, newBelt, notes) => {
     const notesStr = notes || 'Website Update';
     const dateStr = sheetDate();
 
+    // Get the numeric sheetId for Progress Log (needed for batchUpdate checkbox)
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: sid, fields: 'sheets.properties' });
+    const logSheet = meta.data.sheets.find(s => s.properties.title === 'Progress Log');
+    const logSheetId = logSheet?.properties?.sheetId;
+
+    let checkboxRow, checkboxCol;
+
     if (isUnity) {
       const gRes = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Progress Log!G:G' });
       const nextRow = Math.max(3, (gRes.data.values || []).length + 1);
@@ -244,6 +251,8 @@ const pushBeltToSheets = async (ninjaName, oldBelt, newBelt, notes) => {
         valueInputOption: 'USER_ENTERED',
         requestBody: { values: [[dateStr, ninjaName, beltStr, notesStr, false]] }
       });
+      checkboxRow = nextRow;
+      checkboxCol = 10; // K = index 10 (0-based)
     } else {
       const aRes = await sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Progress Log!A:A' });
       const nextRow = Math.max(3, (aRes.data.values || []).length + 1);
@@ -251,6 +260,20 @@ const pushBeltToSheets = async (ninjaName, oldBelt, newBelt, notes) => {
         spreadsheetId: sid, range: `Progress Log!A${nextRow}:E${nextRow}`,
         valueInputOption: 'USER_ENTERED',
         requestBody: { values: [[dateStr, ninjaName, beltStr, notesStr, false]] }
+      });
+      checkboxRow = nextRow;
+      checkboxCol = 4; // E = index 4 (0-based)
+    }
+
+    // Convert the last cell to a real checkbox widget (same as Apps Script's insertCheckboxes())
+    if (logSheetId != null) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: sid,
+        requestBody: { requests: [{ repeatCell: {
+          range: { sheetId: logSheetId, startRowIndex: checkboxRow - 1, endRowIndex: checkboxRow, startColumnIndex: checkboxCol, endColumnIndex: checkboxCol + 1 },
+          cell: { dataValidation: { condition: { type: 'BOOLEAN' }, showCustomUi: true } },
+          fields: 'dataValidation'
+        }}]}
       });
     }
 
