@@ -926,6 +926,8 @@ app.post('/admin/update-dashboard', isAuthenticated, upload.any(), async (req, r
   d.notmMonth = b.notmMonth; d.notmColor = b.notmColor; d.funFact = b.funFact; d.senseiOfMonth = b.senseiOfMonth;
   d.theme = b.theme; d.senseiVotingLink = b.senseiVotingLink;
   d.backgroundImage = b.backgroundImage || '';
+  const parsedMin = parseInt(b.activityStartMinute);
+  d.activityStartMinute = (!isNaN(parsedMin) && parsedMin >= 0 && parsedMin <= 59) ? parsedMin : 45;
   await d.save(); res.redirect('/admin/dashboard-editor');
 });
 

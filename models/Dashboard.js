@@ -59,7 +59,8 @@ const dashboardSchema = new mongoose.Schema({
   bossName: { type: String, default: 'Dr. Worm' },
   bossImage: { type: String, default: '/img/cn_logo.png' },
   bossActive: { type: Boolean, default: false },
-  backgroundImage: { type: String, default: '' }
+  backgroundImage: { type: String, default: '' },
+  activityStartMinute: { type: Number, default: 45 }
 });
 
 module.exports = mongoose.model('Dashboard', dashboardSchema);

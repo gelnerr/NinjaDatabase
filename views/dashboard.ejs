@@ -1227,6 +1227,8 @@
   </script>
 
   <script>
+    const ACTIVITY_START_MINUTE = <%= data.activityStartMinute ?? 45 %>;
+
     function updateSessionTimer() {
       const now = new Date();
       const mins = now.getMinutes();
@@ -1234,24 +1236,24 @@
       const timerContainer = document.getElementById('timer-container');
       const timerBar = document.getElementById('timer-bar');
       const timerText = document.getElementById('timer-text');
-      
+
       if (!timerContainer || !timerBar || !timerText) return;
 
-      if (mins < 45) {
-        // Coding phase (0-45 mins)
+      if (mins < ACTIVITY_START_MINUTE) {
+        // Coding phase
         const totalSecsElapsed = (mins * 60) + secs;
-        const totalSecsInPhase = 45 * 60;
+        const totalSecsInPhase = ACTIVITY_START_MINUTE * 60;
         const percent = (totalSecsElapsed / totalSecsInPhase) * 100;
-        
+
         const secsLeft = totalSecsInPhase - totalSecsElapsed;
         const minsLeft = Math.floor(secsLeft / 60);
         const displaySecs = (secsLeft % 60).toString().padStart(2, '0');
-        
+
         timerBar.style.width = percent + '%';
         timerText.innerText = `${minsLeft}:${displaySecs} LEFT FOR CODING!`;
         timerContainer.classList.remove('phase-activity');
       } else {
-        // Activity phase (45-60 mins)
+        // Activity phase
         timerBar.style.width = '100%';
         timerText.innerText = 'TIME FOR DAILY ACTIVITY!';
         timerContainer.classList.add('phase-activity');
