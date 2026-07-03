@@ -1227,7 +1227,7 @@
   </script>
 
   <script>
-    const ACTIVITY_START_MINUTE = <%= data.activityStartMinute ?? 45 %>;
+    const ACTIVITY_START_MINUTE = <%= data.activityStartMinute != null ? data.activityStartMinute : 45 %>;
 
     function updateSessionTimer() {
       const now = new Date();
