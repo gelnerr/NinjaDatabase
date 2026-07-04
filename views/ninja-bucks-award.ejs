@@ -46,6 +46,11 @@
             max-height:260px; overflow-y:auto;
           "></div>
         </div>
+        <div id="ninjaBucksBadge" class="mt-2" style="display:none;">
+          <span class="badge rounded-pill px-3 py-2" style="background:#fffbeb; color:#92400e; border:1.5px solid #fde68a; font-size:0.85rem; font-weight:600;">
+            <i class="bi bi-coin me-1"></i> Current balance: <strong id="ninjaCurrentNB">0</strong> NB
+          </span>
+        </div>
       </div>
 
       <!-- Reason pills (award mode) -->
@@ -143,10 +148,19 @@
   .ninja-option {
     padding: 10px 16px; cursor: pointer; font-weight: 600; font-size: 0.9rem;
     border-bottom: 1px solid #f3f4f6; transition: background 0.1s;
+    display: flex; align-items: center; justify-content: space-between;
   }
   .ninja-option:last-child { border-bottom: none; }
   .ninja-option:hover, .ninja-option.active { background: #eff6ff; color: var(--cn-blue); }
   .ninja-option .match-highlight { color: var(--cn-blue); text-decoration: underline; }
+  .ninja-option .ninja-nb-count {
+    font-size: 0.75rem; font-weight: 700; color: #92400e;
+    background: #fef3c7; border: 1px solid #fde68a;
+    border-radius: 20px; padding: 2px 9px; white-space: nowrap; flex-shrink: 0; margin-left: 10px;
+  }
+  .ninja-option:hover .ninja-nb-count, .ninja-option.active .ninja-nb-count {
+    background: #fde68a;
+  }
   #ninjaSearch:focus { border-color: var(--cn-blue); box-shadow: 0 0 0 0.2rem rgba(53,142,188,.15); }
 
   /* Other — gray */
@@ -159,7 +173,8 @@
 
 <script>
   // ── Ninja autocomplete ────────────────────────────────────────────────────
-  const ALL_NINJAS = <%- JSON.stringify(leaderboard.map(n => n.name)) %>;
+  const ALL_NINJAS = <%- JSON.stringify(leaderboard.map(n => ({ name: n.name, total: n.total || 0 }))) %>;
+  const NINJA_MAP = new Map(ALL_NINJAS.map(n => [n.name, n.total]));
   let activeIdx = -1;
 
   const searchInput  = document.getElementById('ninjaSearch');
@@ -183,28 +198,34 @@
     if (!matches.length) {
       dropdown.innerHTML = '<div class="ninja-option text-muted fst-italic">No ninjas found</div>';
     } else {
-      matches.forEach((name, i) => {
+      matches.forEach(({ name, total }) => {
         const item = document.createElement('div');
         item.className = 'ninja-option';
-        item.innerHTML = highlight(name, query);
-        item.addEventListener('mousedown', e => { e.preventDefault(); selectNinja(name); });
+        item.dataset.name = name;
+        item.dataset.total = total;
+        item.innerHTML = `<span>${highlight(name, query)}</span><span class="ninja-nb-count">${total} NB</span>`;
+        item.addEventListener('mousedown', e => { e.preventDefault(); selectNinja(name, total); });
         dropdown.appendChild(item);
       });
     }
     dropdown.style.display = 'block';
   }
 
-  function selectNinja(name) {
+  function selectNinja(name, total) {
     searchInput.value = name;
     dropdown.style.display = 'none';
     clearBtn.style.display = 'flex';
     activeIdx = -1;
+    const nb = total !== undefined ? total : (NINJA_MAP.get(name) ?? 0);
+    document.getElementById('ninjaCurrentNB').textContent = nb;
+    document.getElementById('ninjaBucksBadge').style.display = 'block';
   }
 
   function clearNinjaSearch() {
     searchInput.value = '';
     dropdown.style.display = 'none';
     clearBtn.style.display = 'none';
+    document.getElementById('ninjaBucksBadge').style.display = 'none';
     searchInput.focus();
   }
 
@@ -212,7 +233,7 @@
     const q = searchInput.value.trim();
     clearBtn.style.display = q ? 'flex' : 'none';
     if (!q) { dropdown.style.display = 'none'; return; }
-    const matches = ALL_NINJAS.filter(n => n.toLowerCase().includes(q.toLowerCase())).slice(0, 10);
+    const matches = ALL_NINJAS.filter(n => n.name.toLowerCase().includes(q.toLowerCase())).slice(0, 10);
     showDropdown(matches, q);
   });
 
@@ -228,7 +249,8 @@
       activeIdx = Math.max(activeIdx - 1, 0);
     } else if (e.key === 'Enter' && activeIdx >= 0) {
       e.preventDefault();
-      selectNinja(items[activeIdx].textContent);
+      const el = items[activeIdx];
+      selectNinja(el.dataset.name, parseInt(el.dataset.total) || 0);
       return;
     } else if (e.key === 'Escape') {
       dropdown.style.display = 'none'; return;
@@ -383,10 +405,10 @@
       });
       const data = await res.json();
       if (data.success) {
-        showToast(isRemove ? `Removed ${amount} NB from ${ninjaName}.` : `${amount} NB awarded to ${ninjaName}!`, isRemove ? 'warning' : 'success');
-        document.getElementById('ninjaSearch').value = '';
+        showToast(isRemove ? `Removed ${amount} NB from ${ninjaName}. New balance: ${data.newTotal} NB` : `${amount} NB awarded to ${ninjaName}! New balance: ${data.newTotal} NB`, isRemove ? 'warning' : 'success');
+        NINJA_MAP.set(ninjaName, data.newTotal);
+        document.getElementById('ninjaCurrentNB').textContent = data.newTotal;
         document.getElementById('amount').value = '';
-        clearNinjaSearch();
         selectedReasons.clear();
         document.querySelectorAll('.reason-pill').forEach(p => p.classList.remove('selected'));
         document.getElementById('otherReasonWrap').style.display = 'none';
