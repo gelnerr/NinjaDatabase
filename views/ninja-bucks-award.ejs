@@ -86,12 +86,22 @@
       </div>
 
       <!-- Amount -->
-      <div class="mb-5">
+      <div class="mb-4">
         <label class="form-label fw-bold text-dark">3. Amount (NB)</label>
         <div class="input-group input-group-lg">
           <span class="input-group-text" id="amountPrefix" style="background:#fffbeb; border-color:#fde68a; color:#92400e;"><i class="bi bi-coin"></i></span>
           <input type="number" id="amount" class="form-control" placeholder="0" min="1">
         </div>
+      </div>
+
+      <!-- Boss damage (only visible when boss is active and a damageable reason is selected) -->
+      <div id="damageSection" class="mb-5" style="display:none;">
+        <label class="form-label fw-bold text-dark">4. Boss Damage <span class="text-muted fw-normal small">(optional)</span></label>
+        <div class="input-group input-group-lg">
+          <span class="input-group-text" style="background:#fff5f5; border-color:#fed7d7; color:#c53030;"><i class="bi bi-lightning-fill"></i></span>
+          <input type="number" id="damageAmount" class="form-control" placeholder="0 (skip)" min="0">
+        </div>
+        <div class="form-text mt-1 small">Damage this ninja deals to the boss. Leave blank to skip.</div>
       </div>
 
       <div class="d-grid">
@@ -172,6 +182,10 @@
 </style>
 
 <script>
+  const BOSS_ACTIVE = <%= bossActive ? 'true' : 'false' %>;
+  const BOSS_NAME   = <%- JSON.stringify(bossName || 'the boss') %>;
+  const NO_DAMAGE_REASONS = new Set(['Other', 'Birthday', 'Daily Activity Challenge', 'Creative']);
+
   // ── Ninja autocomplete ────────────────────────────────────────────────────
   const ALL_NINJAS = <%- JSON.stringify(leaderboard.map(n => ({ name: n.name, total: n.total || 0 }))) %>;
   const NINJA_MAP = new Map(ALL_NINJAS.map(n => [n.name, n.total]));
@@ -301,6 +315,13 @@
     });
   }
 
+  function updateDamageSection(isAwardMode) {
+    const hasDamageable = [...selectedReasons.keys()].some(l => !NO_DAMAGE_REASONS.has(l));
+    const show = BOSS_ACTIVE && isAwardMode !== false && hasDamageable;
+    document.getElementById('damageSection').style.display = show ? 'block' : 'none';
+    if (!show) document.getElementById('damageAmount').value = '';
+  }
+
   function toggleReason(pill, reason) {
     if (selectedReasons.has(reason.label)) {
       selectedReasons.delete(reason.label);
@@ -313,6 +334,7 @@
     document.getElementById('otherReasonWrap').style.display   = selectedReasons.has('Other')            ? 'block' : 'none';
     document.getElementById('dojoAmountWrap').style.display    = selectedReasons.has('Rules of the Dojo') ? 'flex'  : 'none';
     updateTotal();
+    updateDamageSection(true);
     if (reason.label === 'Other') document.getElementById('otherReasonText').focus();
     if (reason.label === 'Rules of the Dojo') document.getElementById('dojoAmount').focus();
   }
@@ -342,6 +364,7 @@
 
     document.getElementById('awardReasonSection').style.display = isRemove ? 'none' : 'block';
     document.getElementById('removeReasonSection').style.display = isRemove ? 'block' : 'none';
+    if (isRemove) { document.getElementById('damageSection').style.display = 'none'; document.getElementById('damageAmount').value = ''; }
 
     if (isRemove) {
       card.classList.add('remove-mode');
@@ -393,6 +416,7 @@
       showToast('Please enter a valid ninja and amount.', 'warning'); return;
     }
 
+    const damageDealt = parseInt(document.getElementById('damageAmount')?.value) || 0;
     const finalAmount = isRemove ? -amount : amount;
     btn.disabled = true;
     btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${isRemove ? 'Removing...' : 'Awarding...'}`;
@@ -401,18 +425,24 @@
       const res = await fetch('/admin/update-ninja-bucks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ninjaName, amount: finalAmount, reason })
+        body: JSON.stringify({ ninjaName, amount: finalAmount, reason, damageDealt })
       });
       const data = await res.json();
       if (data.success) {
-        showToast(isRemove ? `Removed ${amount} NB from ${ninjaName}. New balance: ${data.newTotal} NB` : `${amount} NB awarded to ${ninjaName}! New balance: ${data.newTotal} NB`, isRemove ? 'warning' : 'success');
+        let msg = isRemove
+          ? `Removed ${amount} NB from ${ninjaName}. Balance: ${data.newTotal} NB`
+          : `${amount} NB awarded to ${ninjaName}! Balance: ${data.newTotal} NB`;
+        if (!isRemove && damageDealt > 0) msg += ` · ${damageDealt} dmg to ${BOSS_NAME}`;
+        showToast(msg, isRemove ? 'warning' : 'success');
         NINJA_MAP.set(ninjaName, data.newTotal);
         document.getElementById('ninjaCurrentNB').textContent = data.newTotal;
         document.getElementById('amount').value = '';
+        document.getElementById('damageAmount').value = '';
         selectedReasons.clear();
         document.querySelectorAll('.reason-pill').forEach(p => p.classList.remove('selected'));
         document.getElementById('otherReasonWrap').style.display = 'none';
         document.getElementById('dojoAmountWrap').style.display = 'none';
+        document.getElementById('damageSection').style.display = 'none';
         document.getElementById('otherReasonText').value = '';
         document.getElementById('dojoAmount').value = '5';
         document.getElementById('selectedCount').textContent = '';

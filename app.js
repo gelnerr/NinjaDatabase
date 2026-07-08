@@ -1013,10 +1013,14 @@ app.post('/admin/sync-totals', isAuthenticated, async (req, res) => {
 });
 // ─────────────────────────────────────────────────────────────────────────────
 
-app.get('/admin/ninja-bucks-award', isAuthenticated, async (req, res) => res.render('ninja-bucks-award', { leaderboard: (await getDashboardData()).leaderboard }));
+app.get('/admin/ninja-bucks-award', isAuthenticated, async (req, res) => {
+  const d = await getDashboardData();
+  res.render('ninja-bucks-award', { leaderboard: d.leaderboard, bossActive: d.bossActive, bossName: d.bossName });
+});
 app.post('/admin/update-ninja-bucks', isAuthenticated, async (req, res) => {
   const { ninjaName, amount, reason } = req.body;
   const parsedAmount = parseInt(amount);
+  const parsedDamage = parseInt(req.body.damageDealt) || 0;
 
   // Ninja.totalNinjaBucks is the source of truth (what Reconcile compares against),
   // so it must drive every other total — not the leaderboard cache.
@@ -1027,13 +1031,29 @@ app.post('/admin/update-ninja-bucks', isAuthenticated, async (req, res) => {
   const n = d.leaderboard.find(x => x.name === ninjaName);
   if (n) { n.total = ninja.totalNinjaBucks; d.markModified('leaderboard'); }
 
+  if (parsedDamage > 0 && d.bossActive) {
+    d.bossHP = Math.max(0, d.bossHP - parsedDamage);
+  }
+
+  // pushNBToSheets must complete before pushDamageToSheets — damage write
+  // scans the NB Log sheet to find the row that was just appended
+  const sheetPromise = pushNBToSheets(ninjaName, parsedAmount, reason, ninja.totalNinjaBucks)
+    .then(() => parsedDamage > 0
+      ? pushDamageToSheets(ninjaName, parsedAmount, reason, parsedDamage).catch(e => console.error('[Sheets] damage push failed:', e.message))
+      : null)
+    .catch(e => console.error('[Sheets] NB push failed:', e.message));
+
   await Promise.all([
     d.save(),
-    NBLog.create({ ninjaName, buttonAction: reason, amount: parsedAmount }),
-    pushNBToSheets(ninjaName, parsedAmount, reason, ninja.totalNinjaBucks).catch(e => console.error('[Sheets] NB push failed:', e.message))
+    NBLog.create({ ninjaName, buttonAction: reason, amount: parsedAmount, damageDealt: parsedDamage }),
+    sheetPromise
   ]);
 
-  res.json({ success: true, newTotal: ninja.totalNinjaBucks });
+  if (parsedDamage > 0 && d.bossActive) {
+    pushBossHPToSheets(d.bossHP).catch(() => {});
+  }
+
+  res.json({ success: true, newTotal: ninja.totalNinjaBucks, newBossHP: d.bossHP });
 });
 
 app.post('/admin/nb-log/delete/:id', isAuthenticated, async (req, res) => {
