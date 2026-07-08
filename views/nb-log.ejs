@@ -54,15 +54,15 @@
       </thead>
       <tbody>
         <%
-          // Only these two reasons unlock the boss attack input
-          const BOSS_ELIGIBLE = new Set([
-            'Completed Build/Quest',
-            'Impact Level Up'
-          ]);
+          const NO_DAMAGE = new Set(['Other', 'Birthday', 'Daily Activity Challenge', 'Creative']);
+          function canDealDamage(action) {
+            if (!action) return false;
+            return action.split(' · ').some(p => !NO_DAMAGE.has(p.trim()));
+          }
         %>
         <% if (logs.length > 0) { %>
           <% logs.forEach(log => { %>
-          <% const canDamage = BOSS_ELIGIBLE.has(log.buttonAction); %>
+          <% const canDamage = canDealDamage(log.buttonAction); %>
             <tr id="row-<%= log._id %>">
               <td class="ps-4 text-muted small">
                 <%= new Date(log.date).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Regina' }) %>
