@@ -1228,6 +1228,8 @@
 
   <script>
     const ACTIVITY_START_MINUTE = <%= activityStartMinute != null ? activityStartMinute : 45 %>;
+    const ACTIVITY_END_MINUTE   = (ACTIVITY_START_MINUTE + 15) % 60;
+    const COUNTDOWN_SECS        = 45 * 60; // activity is always 15 min, so countdown is always 45 min
 
     function updateSessionTimer() {
       const now = new Date();
@@ -1239,24 +1241,31 @@
 
       if (!timerContainer || !timerBar || !timerText) return;
 
-      if (mins < ACTIVITY_START_MINUTE) {
-        // Coding phase
-        const totalSecsElapsed = (mins * 60) + secs;
-        const totalSecsInPhase = ACTIVITY_START_MINUTE * 60;
-        const percent = (totalSecsElapsed / totalSecsInPhase) * 100;
+      // Activity window is [START, START+15). Handles wrap-around (e.g. start=50 → end=5).
+      const isActivity = ACTIVITY_END_MINUTE > ACTIVITY_START_MINUTE
+        ? (mins >= ACTIVITY_START_MINUTE && mins < ACTIVITY_END_MINUTE)
+        : (mins >= ACTIVITY_START_MINUTE || mins < ACTIVITY_END_MINUTE);
 
-        const secsLeft = totalSecsInPhase - totalSecsElapsed;
-        const minsLeft = Math.floor(secsLeft / 60);
-        const displaySecs = (secsLeft % 60).toString().padStart(2, '0');
+      if (isActivity) {
+        timerBar.style.width = '100%';
+        timerText.innerText = 'TIME FOR DAILY ACTIVITY!';
+        timerContainer.classList.add('phase-activity');
+      } else {
+        // Seconds remaining until next activity start
+        let secsUntil;
+        if (mins < ACTIVITY_START_MINUTE) {
+          secsUntil = (ACTIVITY_START_MINUTE - mins) * 60 - secs;
+        } else {
+          secsUntil = (60 - mins + ACTIVITY_START_MINUTE) * 60 - secs;
+        }
+
+        const percent = Math.min(100, Math.max(0, ((COUNTDOWN_SECS - secsUntil) / COUNTDOWN_SECS) * 100));
+        const minsLeft = Math.floor(secsUntil / 60);
+        const displaySecs = (secsUntil % 60).toString().padStart(2, '0');
 
         timerBar.style.width = percent + '%';
         timerText.innerText = `${minsLeft}:${displaySecs} LEFT FOR CODING!`;
         timerContainer.classList.remove('phase-activity');
-      } else {
-        // Activity phase
-        timerBar.style.width = '100%';
-        timerText.innerText = 'TIME FOR DAILY ACTIVITY!';
-        timerContainer.classList.add('phase-activity');
       }
     }
 

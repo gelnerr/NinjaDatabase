@@ -57,7 +57,7 @@
             <input type="number" name="activityStartMinute" class="form-control border-start-0" min="0" max="59" value="<%= data.activityStartMinute != null ? data.activityStartMinute : 45 %>" style="max-width: 100px;">
             <span class="input-group-text bg-light border-start-0 text-muted">/ 59</span>
           </div>
-          <div class="form-text mt-1 small">Timer switches to "Daily Activity!" at this minute each hour. Default: 45 (i.e. xx:45).</div>
+          <div class="form-text mt-1 small">Activity starts at this minute and runs for exactly 15 min (e.g. 45 → xx:45–xx:00, 15 → xx:15–xx:30). Default: 45.</div>
         </div>
 
         <div class="mb-4">
