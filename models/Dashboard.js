@@ -20,6 +20,7 @@ const ninjaOfTheMonthSchema = new mongoose.Schema({
 const shopItemSchema = new mongoose.Schema({
   name: String,
   price: Number,
+  moneyValue: { type: Number, default: 0 },
   category: String,
   outOfStock: { type: Boolean, default: false },
   image: { type: String, default: 'bi-box-seam' }

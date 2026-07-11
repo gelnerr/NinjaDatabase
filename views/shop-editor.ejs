@@ -28,14 +28,21 @@
             </div>
             
             <div class="row g-2 mb-3">
-              <div class="col-6">
+              <div class="col-4">
                 <label class="small fw-bold text-muted text-uppercase">Price (NB)</label>
                 <div class="input-group">
                   <span class="input-group-text bg-white"><i class="bi bi-coin text-warning"></i></span>
                   <input type="number" name="shop_price_<%= i %>" class="form-control" value="<%= item.price %>" required>
                 </div>
               </div>
-              <div class="col-6">
+              <div class="col-4">
+                <label class="small fw-bold text-muted text-uppercase">Money Value ($)</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-white"><i class="bi bi-cash text-success"></i></span>
+                  <input type="number" step="0.01" min="0" name="shop_moneyValue_<%= i %>" class="form-control" value="<%= item.moneyValue || 0 %>">
+                </div>
+              </div>
+              <div class="col-4">
                 <label class="small fw-bold text-muted text-uppercase">Category</label>
                 <select name="shop_category_<%= i %>" class="form-select">
                   <option value="Merch" <%= item.category === 'Merch' ? 'selected' : '' %>>Merch</option>
@@ -82,11 +89,21 @@
           <input type="text" name="shop_name_${index}" class="form-control" placeholder="e.g. Code Ninjas Sticker" required>
         </div>
         <div class="row g-2 mb-3">
-          <div class="col-6">
+          <div class="col-4">
             <label class="small fw-bold text-muted text-uppercase">Price (NB)</label>
-            <input type="number" name="shop_price_${index}" class="form-control" value="10" required>
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-coin text-warning"></i></span>
+              <input type="number" name="shop_price_${index}" class="form-control" value="10" required>
+            </div>
           </div>
-          <div class="col-6">
+          <div class="col-4">
+            <label class="small fw-bold text-muted text-uppercase">Money Value ($)</label>
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-cash text-success"></i></span>
+              <input type="number" step="0.01" min="0" name="shop_moneyValue_${index}" class="form-control" value="0">
+            </div>
+          </div>
+          <div class="col-4">
             <label class="small fw-bold text-muted text-uppercase">Category</label>
             <select name="shop_category_${index}" class="form-select">
               <option value="Merch">Merch</option>

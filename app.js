@@ -944,7 +944,7 @@ app.post('/admin/update-ninjabucks-config', isAuthenticated, async (req, res) =>
 app.get('/admin/shop-editor', isAuthenticated, async (req, res) => res.render('shop-editor', { data: await getDashboardData() }));
 app.post('/admin/update-shop', isAuthenticated, async (req, res) => {
   const d = await getDashboardData(); const b = req.body; const s=[]; let k=0;
-  while(b[`shop_name_${k}`]!==undefined){ s.push({ name: b[`shop_name_${k}`], price: parseInt(b[`shop_price_${k}`])||0, category: b[`shop_category_${k}`], outOfStock: b[`shop_outOfStock_${k}`]==='on', image: b[`shop_image_${k}`]||'bi-box-seam' }); k++; }
+  while(b[`shop_name_${k}`]!==undefined){ s.push({ name: b[`shop_name_${k}`], price: parseInt(b[`shop_price_${k}`])||0, moneyValue: parseFloat(b[`shop_moneyValue_${k}`])||0, category: b[`shop_category_${k}`], outOfStock: b[`shop_outOfStock_${k}`]==='on', image: b[`shop_image_${k}`]||'bi-box-seam' }); k++; }
   d.shopItems = s; await d.save(); res.redirect('/admin/shop-editor');
 });
 
