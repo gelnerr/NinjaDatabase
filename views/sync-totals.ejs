@@ -112,6 +112,25 @@
   Use <strong>Pull Sheets → Website</strong> if you trust the spreadsheet values — this overwrites MongoDB totals for every ninja.
 </div>
 
+<% if (hasSheets) { %>
+<div class="admin-card mt-4 shadow-sm">
+  <div class="p-4 border-bottom bg-light">
+    <div class="fw-bold text-dark"><i class="bi bi-people-fill me-2"></i>Sync All Ninjas from Sheets</div>
+  </div>
+  <div class="p-4">
+    <p class="text-muted mb-3">
+      Reads the <code>data</code> sheet (names + NB totals) and <code>Progress</code> sheet (names + current belt) from Google Sheets,
+      then <strong>creates</strong> any ninjas missing from the website and <strong>updates</strong> existing ones.
+      Use this to fix ninjas that were added via the spreadsheet but never appeared on the website.
+    </p>
+    <button class="btn btn-success rounded-pill px-4 fw-bold" onclick="syncNinjasFromSheets()">
+      <i class="bi bi-arrow-repeat me-2"></i>Sync All Ninjas from Sheets
+    </button>
+    <div id="syncNinjaResult" class="mt-3" style="display:none;"></div>
+  </div>
+</div>
+<% } %>
+
 <script>
   function showToast(msg, type = 'success') {
     const el = document.getElementById('syncToast');
@@ -141,6 +160,39 @@
       }
     } catch(e) { showToast('Network error.', 'danger'); }
   }
+
+  async function syncNinjasFromSheets() {
+    if (!confirm('This will read ALL ninjas from the spreadsheet and create/update them on the website. Continue?')) return;
+
+    showToast('Syncing ninjas from sheets... this may take a moment.', 'primary');
+    const resultDiv = document.getElementById('syncNinjaResult');
+
+    try {
+      const res = await fetch('/admin/sync-ninjas-from-sheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `
+          <div class="alert alert-success mb-0">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <strong>Sync complete!</strong>
+            ${data.created} ninjas created, ${data.updated} updated, ${data.skipped} skipped.
+          </div>`;
+        showToast(`Done! ${data.created} created, ${data.updated} updated.`);
+        setTimeout(() => location.reload(), 3000);
+      } else {
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `<div class="alert alert-danger mb-0"><i class="bi bi-x-circle-fill me-2"></i>${data.error}</div>`;
+        showToast('Error: ' + data.error, 'danger');
+      }
+    } catch(e) {
+      showToast('Network error.', 'danger');
+    }
+  }
 </script>
 
 <%- include('partials/admin-footer') %>
+

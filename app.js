@@ -537,6 +537,23 @@ app.post('/api/sheets-webhook', async (req, res) => {
       return res.json({ success: true, newHP: d.bossHP });
     }
 
+    if (type === 'add_ninja') {
+      if (!ninjaName) return res.status(400).json({ error: 'Invalid payload — missing ninjaName' });
+
+      const totalNB = parseInt(req.body.totalNinjaBucks) || 5;
+      const belt = req.body.currentBelt || 'White';
+
+      // Use upsert to avoid duplicate-key errors if the ninja somehow already exists
+      await Ninja.findOneAndUpdate(
+        { name: ninjaName },
+        { $setOnInsert: { totalNinjaBucks: totalNB, currentBelt: belt, isActive: true } },
+        { upsert: true }
+      );
+
+      console.log(`[Webhook] New ninja added: ${ninjaName} (${belt}, ${totalNB} NB)`);
+      return res.json({ success: true });
+    }
+
     return res.status(400).json({ error: `Unknown event type: ${type}` });
   } catch(e) {
     console.error('[Webhook] Error:', e.message);
@@ -1010,6 +1027,67 @@ app.post('/admin/sync-totals', isAuthenticated, async (req, res) => {
 
     res.json({ success: true, synced });
   } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── One-time Ninja Sync from Sheets ──────────────────────────────────────────
+// Reads the data sheet (names + NB totals) and Progress sheet (names + belts)
+// then upserts every ninja into MongoDB. Fixes ninjas added via the spreadsheet
+// addNinja() function that never got created on the website.
+app.post('/admin/sync-ninjas-from-sheets', isAuthenticated, async (req, res) => {
+  const d = await getDashboardData();
+  if (!d.mainSpreadsheetId) return res.status(400).json({ error: 'No operational spreadsheet configured' });
+
+  const sheets = await getSheetClient();
+  if (!sheets) return res.status(500).json({ error: 'Sheets auth failed' });
+
+  try {
+    const sid = d.mainSpreadsheetId;
+
+    // Read both sheets in parallel
+    const [dataRes, progressRes] = await Promise.all([
+      sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'data!A:B' }),
+      sheets.spreadsheets.values.get({ spreadsheetId: sid, range: 'Progress!A:B' })
+    ]);
+
+    const dataRows = (dataRes.data.values || []).slice(1); // skip header
+    const progressRows = (progressRes.data.values || []).slice(1); // skip header
+
+    // Build belt lookup from Progress sheet: { name -> belt }
+    const beltMap = {};
+    for (const row of progressRows) {
+      const name = row[0]?.trim();
+      const belt = row[1]?.trim();
+      if (name && belt) beltMap[name.toLowerCase()] = belt;
+    }
+
+    let created = 0, updated = 0, skipped = 0;
+
+    for (const row of dataRows) {
+      const name = row[0]?.trim();
+      if (!name) { skipped++; continue; }
+
+      const totalNB = parseInt(row[1]?.toString().replace(/,/g, '')) || 0;
+      const belt = beltMap[name.toLowerCase()] || 'White';
+
+      const existing = await Ninja.findOne({ name: { $regex: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } });
+
+      if (existing) {
+        existing.totalNinjaBucks = totalNB;
+        existing.currentBelt = belt;
+        await existing.save();
+        updated++;
+      } else {
+        await Ninja.create({ name, totalNinjaBucks: totalNB, currentBelt: belt, isActive: true });
+        created++;
+      }
+    }
+
+    console.log(`[Sync] Ninjas from sheets: ${created} created, ${updated} updated, ${skipped} skipped`);
+    res.json({ success: true, created, updated, skipped });
+  } catch(e) {
+    console.error('[Sync] sync-ninjas-from-sheets error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 // ─────────────────────────────────────────────────────────────────────────────
 
