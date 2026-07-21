@@ -28,16 +28,14 @@
   <div class="col-lg-9">
     <div id="formCard" class="admin-card p-4 p-md-5 shadow-sm">
 
-      <!-- Ninja selector with custom autocomplete -->
+      <!-- Ninja selector with multi-select chips -->
       <div class="mb-4">
-        <label class="form-label fw-bold text-dark">1. Select Ninja</label>
+        <label class="form-label fw-bold text-dark">1. Select Ninja(s) <span class="text-muted fw-normal small">(search and add multiple)</span></label>
+        <div id="selectedNinjasChips" class="d-flex flex-wrap gap-2 mb-2"></div>
         <div class="position-relative">
           <div class="input-group">
             <span class="input-group-text bg-white border-end-0"><i class="bi bi-person-search"></i></span>
             <input type="text" id="ninjaSearch" class="form-control border-start-0" placeholder="Start typing a name..." autocomplete="off">
-            <span class="input-group-text bg-white border-start-0 text-muted" id="clearSearch" style="cursor:pointer; display:none;" onclick="clearNinjaSearch()">
-              <i class="bi bi-x-lg"></i>
-            </span>
           </div>
           <div id="ninjaDropdown" style="
             display:none; position:absolute; top:100%; left:0; right:0; z-index:1050;
@@ -46,9 +44,9 @@
             max-height:260px; overflow-y:auto;
           "></div>
         </div>
-        <div id="ninjaBucksBadge" class="mt-2" style="display:none;">
-          <span class="badge rounded-pill px-3 py-2" style="background:#fffbeb; color:#92400e; border:1.5px solid #fde68a; font-size:0.85rem; font-weight:600;">
-            <i class="bi bi-coin me-1"></i> Current balance: <strong id="ninjaCurrentNB">0</strong> NB
+        <div id="ninjaCountBadge" class="mt-2" style="display:none;">
+          <span class="badge rounded-pill px-3 py-2" style="background:#e8f4fb; color:#1e6a94; border:1.5px solid #93c5fd; font-size:0.85rem; font-weight:600;">
+            <i class="bi bi-people-fill me-1"></i> <strong id="ninjaSelectedCount">0</strong> ninja(s) selected
           </span>
         </div>
       </div>
@@ -101,7 +99,7 @@
           <span class="input-group-text" style="background:#fff5f5; border-color:#fed7d7; color:#c53030;"><i class="bi bi-lightning-fill"></i></span>
           <input type="number" id="damageAmount" class="form-control" placeholder="0 (skip)" min="0">
         </div>
-        <div class="form-text mt-1 small">Damage this ninja deals to the boss. Leave blank to skip.</div>
+        <div class="form-text mt-1 small">Damage each ninja deals to the boss. Leave blank to skip.</div>
       </div>
 
       <div class="d-grid">
@@ -179,6 +177,33 @@
   .pill-other:hover { background: #f3f4f6; border-color: #9ca3af; }
   .pill-other.selected { background: #6b7280; border-color: #4b5563; color: white; }
   .pill-other.selected .nb-badge { background: rgba(255,255,255,0.25); color: white; }
+
+  /* Multi-select ninja chips */
+  .ninja-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: linear-gradient(135deg, #e8f4fb 0%, #dbeafe 100%);
+    border: 1.5px solid #93c5fd; border-radius: 50px;
+    padding: 5px 8px 5px 14px; font-size: 0.82rem; font-weight: 600;
+    color: #1e6a94; animation: chipIn 0.2s ease-out;
+  }
+  .ninja-chip .chip-nb {
+    font-size: 0.7rem; font-weight: 700; color: #92400e;
+    background: #fef3c7; border-radius: 12px; padding: 1px 7px;
+  }
+  .ninja-chip .chip-remove {
+    width: 20px; height: 20px; border-radius: 50%; border: none;
+    background: rgba(0,0,0,0.08); color: #64748b; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; transition: all 0.15s; padding: 0; line-height: 1;
+  }
+  .ninja-chip .chip-remove:hover { background: #ef4444; color: white; }
+  @keyframes chipIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .ninja-option.already-selected {
+    opacity: 0.45; pointer-events: none; background: #f9fafb;
+  }
 </style>
 
 <script>
@@ -186,14 +211,15 @@
   const BOSS_NAME   = <%- JSON.stringify(bossName || 'the boss') %>;
   const NO_DAMAGE_REASONS = new Set(['Other', 'Birthday', 'Daily Activity Challenge', 'Creative']);
 
-  // ── Ninja autocomplete ────────────────────────────────────────────────────
+  // ── Multi-select Ninja autocomplete ─────────────────────────────────────
   const ALL_NINJAS = <%- JSON.stringify(leaderboard.map(n => ({ name: n.name, total: n.total || 0 }))) %>;
   const NINJA_MAP = new Map(ALL_NINJAS.map(n => [n.name, n.total]));
+  const selectedNinjas = new Map(); // name → { name, total }
   let activeIdx = -1;
 
   const searchInput  = document.getElementById('ninjaSearch');
   const dropdown     = document.getElementById('ninjaDropdown');
-  const clearBtn     = document.getElementById('clearSearch');
+  const chipsContainer = document.getElementById('selectedNinjasChips');
 
   function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -214,38 +240,64 @@
     } else {
       matches.forEach(({ name, total }) => {
         const item = document.createElement('div');
-        item.className = 'ninja-option';
+        const alreadyPicked = selectedNinjas.has(name);
+        item.className = 'ninja-option' + (alreadyPicked ? ' already-selected' : '');
         item.dataset.name = name;
         item.dataset.total = total;
-        item.innerHTML = `<span>${highlight(name, query)}</span><span class="ninja-nb-count">${total} NB</span>`;
-        item.addEventListener('mousedown', e => { e.preventDefault(); selectNinja(name, total); });
+        const checkMark = alreadyPicked ? '<i class="bi bi-check-circle-fill text-success me-2"></i>' : '';
+        item.innerHTML = `<span>${checkMark}${highlight(name, query)}</span><span class="ninja-nb-count">${total} NB</span>`;
+        if (!alreadyPicked) {
+          item.addEventListener('mousedown', e => { e.preventDefault(); addNinja(name, total); });
+        }
         dropdown.appendChild(item);
       });
     }
     dropdown.style.display = 'block';
   }
 
-  function selectNinja(name, total) {
-    searchInput.value = name;
-    dropdown.style.display = 'none';
-    clearBtn.style.display = 'flex';
-    activeIdx = -1;
+  function addNinja(name, total) {
+    if (selectedNinjas.has(name)) return;
     const nb = total !== undefined ? total : (NINJA_MAP.get(name) ?? 0);
-    document.getElementById('ninjaCurrentNB').textContent = nb;
-    document.getElementById('ninjaBucksBadge').style.display = 'block';
-  }
-
-  function clearNinjaSearch() {
+    selectedNinjas.set(name, { name, total: nb });
+    renderChips();
     searchInput.value = '';
     dropdown.style.display = 'none';
-    clearBtn.style.display = 'none';
-    document.getElementById('ninjaBucksBadge').style.display = 'none';
     searchInput.focus();
+  }
+
+  function removeNinja(name) {
+    selectedNinjas.delete(name);
+    renderChips();
+    searchInput.focus();
+  }
+
+  function renderChips() {
+    chipsContainer.innerHTML = '';
+    for (const [name, { total }] of selectedNinjas) {
+      const chip = document.createElement('div');
+      chip.className = 'ninja-chip';
+      chip.innerHTML = `
+        ${escapeHtml(name)}
+        <span class="chip-nb">${total} NB</span>
+        <button class="chip-remove" title="Remove" onclick="removeNinja('${escapeHtml(name.replace(/'/g, "\\'"))}')">
+          <i class="bi bi-x"></i>
+        </button>
+      `;
+      chipsContainer.appendChild(chip);
+    }
+    // Update count badge
+    const badge = document.getElementById('ninjaCountBadge');
+    const count = document.getElementById('ninjaSelectedCount');
+    if (selectedNinjas.size > 0) {
+      badge.style.display = 'block';
+      count.textContent = selectedNinjas.size;
+    } else {
+      badge.style.display = 'none';
+    }
   }
 
   searchInput.addEventListener('input', () => {
     const q = searchInput.value.trim();
-    clearBtn.style.display = q ? 'flex' : 'none';
     if (!q) { dropdown.style.display = 'none'; return; }
     const matches = ALL_NINJAS.filter(n => n.name.toLowerCase().includes(q.toLowerCase())).slice(0, 10);
     showDropdown(matches, q);
@@ -253,24 +305,27 @@
 
   // Keyboard navigation
   searchInput.addEventListener('keydown', e => {
-    const items = dropdown.querySelectorAll('.ninja-option');
-    if (!items.length || dropdown.style.display === 'none') return;
+    const items = dropdown.querySelectorAll('.ninja-option:not(.already-selected)');
+    const allItems = dropdown.querySelectorAll('.ninja-option');
+    if (!allItems.length || dropdown.style.display === 'none') return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      activeIdx = Math.min(activeIdx + 1, items.length - 1);
+      activeIdx = Math.min(activeIdx + 1, allItems.length - 1);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       activeIdx = Math.max(activeIdx - 1, 0);
     } else if (e.key === 'Enter' && activeIdx >= 0) {
       e.preventDefault();
-      const el = items[activeIdx];
-      selectNinja(el.dataset.name, parseInt(el.dataset.total) || 0);
+      const el = allItems[activeIdx];
+      if (!el.classList.contains('already-selected')) {
+        addNinja(el.dataset.name, parseInt(el.dataset.total) || 0);
+      }
       return;
     } else if (e.key === 'Escape') {
       dropdown.style.display = 'none'; return;
     }
-    items.forEach((item, i) => item.classList.toggle('active', i === activeIdx));
-    if (activeIdx >= 0) items[activeIdx].scrollIntoView({ block: 'nearest' });
+    allItems.forEach((item, i) => item.classList.toggle('active', i === activeIdx && !item.classList.contains('already-selected')));
+    if (activeIdx >= 0 && allItems[activeIdx]) allItems[activeIdx].scrollIntoView({ block: 'nearest' });
   });
 
   // Close when clicking outside
@@ -391,11 +446,27 @@
     const el = document.getElementById('awardToast');
     document.getElementById('toastMsg').textContent = msg;
     el.className = `toast align-items-center text-white bg-${type} border-0 shadow`;
-    bootstrap.Toast.getOrCreateInstance(el, { delay: 3000 }).show();
+    bootstrap.Toast.getOrCreateInstance(el, { delay: 4000 }).show();
+  }
+
+  function resetForm() {
+    document.getElementById('amount').value = '';
+    document.getElementById('damageAmount').value = '';
+    selectedReasons.clear();
+    document.querySelectorAll('.reason-pill').forEach(p => p.classList.remove('selected'));
+    document.getElementById('otherReasonWrap').style.display = 'none';
+    document.getElementById('dojoAmountWrap').style.display = 'none';
+    document.getElementById('damageSection').style.display = 'none';
+    document.getElementById('otherReasonText').value = '';
+    document.getElementById('dojoAmount').value = '5';
+    document.getElementById('selectedCount').textContent = '';
+    selectedNinjas.clear();
+    renderChips();
+    searchInput.value = '';
   }
 
   async function submitAction() {
-    const ninjaName = document.getElementById('ninjaSearch').value.trim();
+    const ninjaNames = [...selectedNinjas.keys()];
     const amount = parseInt(document.getElementById('amount').value);
     const btn = document.getElementById('actionBtn');
     const isRemove = currentMode === 'remove';
@@ -412,43 +483,54 @@
       reason = parts.join(' · ');
     }
 
-    if (!ninjaName || !amount || amount <= 0) {
-      showToast('Please enter a valid ninja and amount.', 'warning'); return;
+    if (!ninjaNames.length) {
+      showToast('Please select at least one ninja.', 'warning'); return;
+    }
+    if (!amount || amount <= 0) {
+      showToast('Please enter a valid amount.', 'warning'); return;
     }
 
     const damageDealt = parseInt(document.getElementById('damageAmount')?.value) || 0;
     const finalAmount = isRemove ? -amount : amount;
     btn.disabled = true;
-    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${isRemove ? 'Removing...' : 'Awarding...'}`;
+    const actionLabel = isRemove ? 'Removing' : 'Awarding';
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${actionLabel}...`;
 
     try {
-      const res = await fetch('/admin/update-ninja-bucks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ninjaName, amount: finalAmount, reason, damageDealt })
-      });
-      const data = await res.json();
-      if (data.success) {
-        let msg = isRemove
-          ? `Removed ${amount} NB from ${ninjaName}. Balance: ${data.newTotal} NB`
-          : `${amount} NB awarded to ${ninjaName}! Balance: ${data.newTotal} NB`;
+      let msg;
+      if (ninjaNames.length === 1) {
+        // Single ninja — use the original endpoint
+        const res = await fetch('/admin/update-ninja-bucks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ninjaName: ninjaNames[0], amount: finalAmount, reason, damageDealt })
+        });
+        const data = await res.json();
+        if (!data.success) { showToast('Error: ' + (data.error || 'Ninja not found.'), 'danger'); return; }
+        NINJA_MAP.set(ninjaNames[0], data.newTotal);
+        msg = isRemove
+          ? `Removed ${amount} NB from ${ninjaNames[0]}. Balance: ${data.newTotal} NB`
+          : `${amount} NB awarded to ${ninjaNames[0]}! Balance: ${data.newTotal} NB`;
         if (!isRemove && damageDealt > 0) msg += ` · ${damageDealt} dmg to ${BOSS_NAME}`;
-        showToast(msg, isRemove ? 'warning' : 'success');
-        NINJA_MAP.set(ninjaName, data.newTotal);
-        document.getElementById('ninjaCurrentNB').textContent = data.newTotal;
-        document.getElementById('amount').value = '';
-        document.getElementById('damageAmount').value = '';
-        selectedReasons.clear();
-        document.querySelectorAll('.reason-pill').forEach(p => p.classList.remove('selected'));
-        document.getElementById('otherReasonWrap').style.display = 'none';
-        document.getElementById('dojoAmountWrap').style.display = 'none';
-        document.getElementById('damageSection').style.display = 'none';
-        document.getElementById('otherReasonText').value = '';
-        document.getElementById('dojoAmount').value = '5';
-        document.getElementById('selectedCount').textContent = '';
       } else {
-        showToast('Error: ' + (res.error || 'Ninja not found in leaderboard.'), 'danger');
+        // Multiple ninjas — use the bulk endpoint
+        const res = await fetch('/admin/update-ninja-bucks-bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ninjaNames, amount: finalAmount, reason, damageDealt })
+        });
+        const data = await res.json();
+        if (!data.success) { showToast('Error: ' + (data.error || 'Bulk update failed.'), 'danger'); return; }
+        // Update local cache
+        for (const r of data.results) { NINJA_MAP.set(r.name, r.newTotal); }
+        const names = data.results.map(r => r.name).join(', ');
+        msg = isRemove
+          ? `Removed ${amount} NB from ${data.results.length} ninja(s): ${names}`
+          : `${amount} NB awarded to ${data.results.length} ninja(s): ${names}`;
+        if (!isRemove && damageDealt > 0) msg += ` · ${damageDealt} dmg each to ${BOSS_NAME}`;
       }
+      showToast(msg, isRemove ? 'warning' : 'success');
+      resetForm();
     } catch(e) { showToast('Network error.', 'danger'); }
     finally {
       btn.disabled = false;

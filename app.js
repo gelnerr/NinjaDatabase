@@ -1134,6 +1134,50 @@ app.post('/admin/update-ninja-bucks', isAuthenticated, async (req, res) => {
   res.json({ success: true, newTotal: ninja.totalNinjaBucks, newBossHP: d.bossHP });
 });
 
+app.post('/admin/update-ninja-bucks-bulk', isAuthenticated, async (req, res) => {
+  const { ninjaNames, amount, reason } = req.body;
+  const parsedAmount = parseInt(amount);
+  const parsedDamage = parseInt(req.body.damageDealt) || 0;
+
+  const d = await getDashboardData();
+  const results = [];
+  let totalDamageDealt = 0;
+
+  for (const ninjaName of (ninjaNames || [])) {
+    const ninja = await Ninja.findOneAndUpdate({ name: ninjaName }, { $inc: { totalNinjaBucks: parsedAmount } }, { new: true });
+    if (!ninja) continue;
+
+    const n = d.leaderboard.find(x => x.name === ninjaName);
+    if (n) { n.total = ninja.totalNinjaBucks; d.markModified('leaderboard'); }
+
+    if (parsedDamage > 0 && d.bossActive) {
+      totalDamageDealt += parsedDamage;
+    }
+
+    const sheetPromise = pushNBToSheets(ninjaName, parsedAmount, reason, ninja.totalNinjaBucks)
+      .then(() => parsedDamage > 0
+        ? pushDamageToSheets(ninjaName, parsedAmount, reason, parsedDamage).catch(e => console.error('[Sheets] damage push failed:', e.message))
+        : null)
+      .catch(e => console.error('[Sheets] NB push failed:', e.message));
+
+    await Promise.all([
+      NBLog.create({ ninjaName, buttonAction: reason, amount: parsedAmount, damageDealt: parsedDamage }),
+      sheetPromise
+    ]);
+
+    results.push({ name: ninjaName, newTotal: ninja.totalNinjaBucks, damageDealt: parsedDamage });
+  }
+
+  if (totalDamageDealt > 0 && d.bossActive) {
+    d.bossHP = Math.max(0, d.bossHP - totalDamageDealt);
+    pushBossHPToSheets(d.bossHP).catch(() => {});
+  }
+
+  await d.save();
+
+  res.json({ success: true, results, newBossHP: d.bossHP });
+});
+
 app.post('/admin/nb-log/delete/:id', isAuthenticated, async (req, res) => {
   try {
     const log = await NBLog.findById(req.params.id);
