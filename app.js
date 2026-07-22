@@ -597,8 +597,14 @@ app.post('/login', async (req, res) => {
 app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
 
 // ADMIN CORE
+app.post('/admin/set-view', isAuthenticated, (req, res) => {
+  req.session.adminView = req.body.view;
+  res.json({ success: true });
+});
+
 app.get('/admin', isAuthenticated, async (req, res) => {
-  res.render('admin', { data: await getDashboardData() });
+  const viewType = req.session.adminView || 'Create';
+  res.render('admin', { data: await getDashboardData(), viewType });
 });
 app.get('/admin/setup', async (req, res) => {
   const { username, password } = req.query;
@@ -610,12 +616,13 @@ app.get('/admin/setup', async (req, res) => {
 // ADMIN ACTIONS
 app.get('/admin/add-ninja', isAuthenticated, (req, res) => res.render('add-ninja'));
 app.post('/admin/add-ninja', isAuthenticated, async (req, res) => {
-  await Ninja.create({ name: req.body.name.trim(), currentBelt: req.body.currentBelt, totalNinjaBucks: req.body.totalNinjaBucks });
+  await Ninja.create({ name: req.body.name.trim(), currentBelt: req.body.currentBelt, totalNinjaBucks: req.body.totalNinjaBucks, type: req.body.type || 'Create' });
   res.redirect('/admin');
 });
 
 app.get('/admin/buttons', isAuthenticated, async (req, res) => {
-  const ninjas = await Ninja.find({ isActive: true }).sort({ name: 1 });
+  const viewType = req.session.adminView || 'Create';
+  const ninjas = await Ninja.find({ isActive: true, type: viewType }).sort({ name: 1 });
   res.render('buttons', { ninjas });
 });
 
@@ -1093,7 +1100,15 @@ app.post('/admin/sync-ninjas-from-sheets', isAuthenticated, async (req, res) => 
 
 app.get('/admin/ninja-bucks-award', isAuthenticated, async (req, res) => {
   const d = await getDashboardData();
-  res.render('ninja-bucks-award', { leaderboard: d.leaderboard, bossActive: d.bossActive, bossName: d.bossName });
+  const viewType = req.session.adminView || 'Create';
+  let leaderboard;
+  if (viewType === 'Junior') {
+    const juniors = await Ninja.find({ isActive: true, type: 'Junior' }).sort({ totalNinjaBucks: -1 });
+    leaderboard = juniors.map(n => ({ name: n.name, total: n.totalNinjaBucks }));
+  } else {
+    leaderboard = d.leaderboard;
+  }
+  res.render('ninja-bucks-award', { leaderboard, bossActive: d.bossActive, bossName: d.bossName });
 });
 app.post('/admin/update-ninja-bucks', isAuthenticated, async (req, res) => {
   const { ninjaName, amount, reason } = req.body;
@@ -1115,11 +1130,14 @@ app.post('/admin/update-ninja-bucks', isAuthenticated, async (req, res) => {
 
   // pushNBToSheets must complete before pushDamageToSheets — damage write
   // scans the NB Log sheet to find the row that was just appended
-  const sheetPromise = pushNBToSheets(ninjaName, parsedAmount, reason, ninja.totalNinjaBucks)
-    .then(() => parsedDamage > 0
-      ? pushDamageToSheets(ninjaName, parsedAmount, reason, parsedDamage).catch(e => console.error('[Sheets] damage push failed:', e.message))
-      : null)
-    .catch(e => console.error('[Sheets] NB push failed:', e.message));
+  let sheetPromise = Promise.resolve();
+  if (ninja.type !== 'Junior') {
+    sheetPromise = pushNBToSheets(ninjaName, parsedAmount, reason, ninja.totalNinjaBucks)
+      .then(() => parsedDamage > 0
+        ? pushDamageToSheets(ninjaName, parsedAmount, reason, parsedDamage).catch(e => console.error('[Sheets] damage push failed:', e.message))
+        : null)
+      .catch(e => console.error('[Sheets] NB push failed:', e.message));
+  }
 
   await Promise.all([
     d.save(),
@@ -1154,11 +1172,14 @@ app.post('/admin/update-ninja-bucks-bulk', isAuthenticated, async (req, res) => 
       totalDamageDealt += parsedDamage;
     }
 
-    const sheetPromise = pushNBToSheets(ninjaName, parsedAmount, reason, ninja.totalNinjaBucks)
-      .then(() => parsedDamage > 0
-        ? pushDamageToSheets(ninjaName, parsedAmount, reason, parsedDamage).catch(e => console.error('[Sheets] damage push failed:', e.message))
-        : null)
-      .catch(e => console.error('[Sheets] NB push failed:', e.message));
+    let sheetPromise = Promise.resolve();
+    if (ninja.type !== 'Junior') {
+      sheetPromise = pushNBToSheets(ninjaName, parsedAmount, reason, ninja.totalNinjaBucks)
+        .then(() => parsedDamage > 0
+          ? pushDamageToSheets(ninjaName, parsedAmount, reason, parsedDamage).catch(e => console.error('[Sheets] damage push failed:', e.message))
+          : null)
+        .catch(e => console.error('[Sheets] NB push failed:', e.message));
+    }
 
     await Promise.all([
       NBLog.create({ ninjaName, buttonAction: reason, amount: parsedAmount, damageDealt: parsedDamage }),
@@ -1199,7 +1220,9 @@ app.post('/admin/nb-log/delete/:id', isAuthenticated, async (req, res) => {
 
     // Delete from MongoDB then sync the deletion to Sheets
     await NBLog.findByIdAndDelete(req.params.id);
-    await deleteFromNBLogSheet(log.ninjaName, log.amount, log.buttonAction, newNinjaTotal);
+    if (!ninja || ninja.type !== 'Junior') {
+      await deleteFromNBLogSheet(log.ninjaName, log.amount, log.buttonAction, newNinjaTotal);
+    }
 
     res.json({ success: true });
   } catch (error) { res.status(500).json({ error: error.message }); }
@@ -1209,15 +1232,20 @@ app.post('/admin/nb-log/update-damage/:id', isAuthenticated, async (req, res) =>
   try {
     const log = await NBLog.findById(req.params.id);
     if (!log) return res.status(404).json({ error: 'Log not found' });
+    const ninja = await Ninja.findOne({ name: log.ninjaName });
     const d = await getDashboardData();
     const oldDmg = log.damageDealt || 0;
     const newDmg = parseInt(req.body.damageDealt) || 0;
     d.bossHP = Math.max(0, Math.min(d.bossMaxHP, d.bossHP + oldDmg - newDmg));
     log.damageDealt = newDmg;
+    let sheetPromise = Promise.resolve();
+    if (!ninja || ninja.type !== 'Junior') {
+      sheetPromise = pushDamageToSheets(log.ninjaName, log.amount, log.buttonAction, newDmg);
+    }
     await Promise.all([
       d.save(),
       log.save(),
-      pushDamageToSheets(log.ninjaName, log.amount, log.buttonAction, newDmg),
+      sheetPromise,
       pushBossHPToSheets(d.bossHP)
     ]);
     res.json({ success: true, newHP: d.bossHP });
@@ -1498,7 +1526,10 @@ app.post('/admin/ninjas/:id/delete', isAuthenticated, async (req, res) => {
     res.json({ success: true });
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
-app.get('/admin/master-data', isAuthenticated, async (req, res) => res.render('master-data', { ninjas: await Ninja.find({}).sort({ name: 1 }) }));
+app.get('/admin/master-data', isAuthenticated, async (req, res) => {
+  const viewType = req.session.adminView || 'Create';
+  res.render('master-data', { ninjas: await Ninja.find({ type: viewType }).sort({ name: 1 }) });
+});
 app.get('/admin/progress-matrix', isAuthenticated, async (req, res) => res.render('progress-matrix', { ninjas: await Ninja.find({ isActive: true }).sort({ name: 1 }) }));
 app.get('/admin/progress-log', isAuthenticated, async (req, res) => res.render('progress-log', { logs: await ProgressLog.find({}).sort({ date: -1 }).limit(100) }));
 

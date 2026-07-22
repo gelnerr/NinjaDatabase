@@ -74,13 +74,17 @@
       <!-- Reason dropdown (remove mode) -->
       <div id="removeReasonSection" class="mb-4" style="display:none;">
         <label class="form-label fw-bold text-dark">2. Reason</label>
-        <select id="removeReason" class="form-select form-select-lg">
+        <select id="removeReason" class="form-select form-select-lg" onchange="document.getElementById('removeOtherWrap').style.display = this.value === 'Other' ? 'block' : 'none';">
           <option value="Shop Purchase">Shop Purchase</option>
           <option value="Merch Redemption">Merch Redemption</option>
           <option value="Event Ticket">Event Ticket</option>
           <option value="Manual Deduction">Manual Deduction</option>
           <option value="Correction / Reversal">Correction / Reversal</option>
+          <option value="Other">Other</option>
         </select>
+        <div id="removeOtherWrap" class="mt-2" style="display:none;">
+          <input type="text" id="removeOtherText" class="form-control" placeholder="Specify custom reason...">
+        </div>
       </div>
 
       <!-- Amount -->
@@ -474,6 +478,7 @@
     let reason;
     if (isRemove) {
       reason = document.getElementById('removeReason').value;
+      if (reason === 'Other') reason = document.getElementById('removeOtherText').value.trim() || 'Other';
     } else {
       if (!selectedReasons.size) { showToast('Please select at least one reason.', 'warning'); return; }
       const parts = [...selectedReasons.keys()].map(label => {

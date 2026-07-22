@@ -6,6 +6,10 @@
     <p class="text-muted mb-0">System status and quick navigation.</p>
   </div>
   <div class="d-flex gap-2">
+    <div class="btn-group me-2 shadow-sm rounded-pill" role="group">
+      <button class="btn btn-outline-primary <%= viewType === 'Create' ? 'active fw-bold' : '' %>" style="border-radius: 50px 0 0 50px;" onclick="setAdminView('Create')">Create Kids</button>
+      <button class="btn btn-outline-primary <%= viewType === 'Junior' ? 'active fw-bold' : '' %>" style="border-radius: 0 50px 50px 0;" onclick="setAdminView('Junior')">Junior Kids</button>
+    </div>
     <a href="/admin/add-ninja" class="btn btn-primary rounded-pill px-4 shadow-sm">
       <i class="bi bi-person-plus-fill me-2"></i> Add Ninja
     </a>
@@ -78,6 +82,7 @@
 <% } %>
 
 <div class="row g-4">
+  <% if (viewType === 'Create') { %>
   <div class="col-md-4">
     <a href="/admin/dashboard-editor" class="nav-card">
       <div class="icon-box ib-green"><i class="bi bi-pencil-square"></i></div>
@@ -85,6 +90,7 @@
       <p>Configure events, activities, NOTM, and lobby display.</p>
     </a>
   </div>
+  <% } %>
   <div class="col-md-4">
     <a href="/admin/ninja-bucks-award" class="nav-card">
       <div class="icon-box ib-amber"><i class="bi bi-coin"></i></div>
@@ -106,6 +112,7 @@
       <p>View and manage the full database of ninjas.</p>
     </a>
   </div>
+  <% if (viewType === 'Create') { %>
   <div class="col-md-4">
     <a href="/admin/progress-matrix" class="nav-card">
       <div class="icon-box ib-purple"><i class="bi bi-trophy-fill"></i></div>
@@ -141,9 +148,19 @@
       <p>Manage database snapshots and restore points.</p>
     </a>
   </div>
+  <% } %>
 </div>
 
 <script>
+  async function setAdminView(view) {
+    await fetch('/admin/set-view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ view })
+    });
+    location.reload();
+  }
+
   async function migrateDatabase(wipe = false) {
     const actionText = wipe ? 'WIPE all current data and re-import' : 'SYNC and update existing data';
     if (!confirm(`Are you sure you want to ${actionText}? A backup will be created automatically.`)) return;

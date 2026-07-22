@@ -15,6 +15,20 @@
         </div>
 
         <div class="mb-4">
+          <label class="form-label fw-bold text-dark">Program Type</label>
+          <div class="d-flex gap-4">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="type" id="typeCreate" value="Create" checked>
+              <label class="form-check-label" for="typeCreate">Create (Standard)</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="type" id="typeJunior" value="Junior">
+              <label class="form-check-label" for="typeJunior">Junior</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-4">
           <label class="form-label fw-bold text-dark">Initial Belt Rank</label>
           <select name="currentBelt" class="form-select">
             <% ['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black', 'Bronze', 'Silver', 'Platinum', 'Gold', 'Going Gold'].forEach(belt => { %>

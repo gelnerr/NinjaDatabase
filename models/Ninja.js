@@ -8,6 +8,7 @@ const ninjaSchema = new mongoose.Schema({
     default: 'White'
   },
   totalNinjaBucks: { type: Number, default: 0 },
+  type: { type: String, enum: ['Create', 'Junior'], default: 'Create' },
   isActive: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
   lastBeltUpdate: { type: Date, default: Date.now }
