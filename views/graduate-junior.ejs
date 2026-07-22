@@ -1,0 +1,39 @@
+<%- include('partials/admin-header', { title: 'Graduate Junior', active: 'dashboard' }) %>
+
+<div class="page-header">
+  <h2 class="page-title">Graduate a Junior Ninja</h2>
+  <p class="text-muted">Transition a Junior kid into the Create (Impact) program. They will receive a White Belt and be synced to the Google Sheets.</p>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="admin-card p-4 p-md-5 shadow-sm">
+      <form action="/admin/graduate-junior" method="POST">
+        <div class="mb-5">
+          <label class="form-label fw-bold text-dark">Select Junior Ninja</label>
+          <% if (juniors.length > 0) { %>
+            <select name="ninjaId" class="form-select form-select-lg" required>
+              <option value="" disabled selected>Choose a Ninja...</option>
+              <% juniors.forEach(ninja => { %>
+                <option value="<%= ninja._id %>"><%= ninja.name %> (NB: <%= ninja.totalNinjaBucks %>)</option>
+              <% }); %>
+            </select>
+          <% } else { %>
+            <div class="alert alert-warning">
+              No Junior ninjas are currently available in the database.
+            </div>
+          <% } %>
+        </div>
+
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn btn-primary btn-lg rounded-pill py-3 fw-bold" <%= juniors.length === 0 ? 'disabled' : '' %>>
+            <i class="bi bi-mortarboard-fill me-2"></i> Graduate to Create Program
+          </button>
+          <a href="/admin" class="btn btn-link text-muted mt-2">Cancel and Go Back</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/admin-footer') %>

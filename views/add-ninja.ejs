@@ -28,11 +28,12 @@
           </div>
         </div>
 
-        <div class="mb-4">
+        <div class="mb-4" id="beltSelectWrap">
           <label class="form-label fw-bold text-dark">Initial Belt Rank</label>
-          <select name="currentBelt" class="form-select">
+          <select name="currentBelt" id="currentBeltSelect" class="form-select">
+            <option value="None">None (Juniors)</option>
             <% ['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black', 'Bronze', 'Silver', 'Platinum', 'Gold', 'Going Gold'].forEach(belt => { %>
-              <option value="<%= belt %>"><%= belt %></option>
+              <option value="<%= belt %>" <%= belt === 'White' ? 'selected' : '' %>><%= belt %></option>
             <% }); %>
           </select>
         </div>
@@ -55,5 +56,26 @@
     </div>
   </div>
 </div>
+
+<script>
+  const typeCreate = document.getElementById('typeCreate');
+  const typeJunior = document.getElementById('typeJunior');
+  const beltWrap = document.getElementById('beltSelectWrap');
+  const beltSelect = document.getElementById('currentBeltSelect');
+
+  function updateBeltVisibility() {
+    if (typeJunior.checked) {
+      beltWrap.style.display = 'none';
+      beltSelect.value = 'None';
+    } else {
+      beltWrap.style.display = 'block';
+      if (beltSelect.value === 'None') beltSelect.value = 'White';
+    }
+  }
+
+  typeCreate.addEventListener('change', updateBeltVisibility);
+  typeJunior.addEventListener('change', updateBeltVisibility);
+  updateBeltVisibility();
+</script>
 
 <%- include('partials/admin-footer') %>

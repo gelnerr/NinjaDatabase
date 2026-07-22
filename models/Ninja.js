@@ -4,7 +4,7 @@ const ninjaSchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true },
   currentBelt: { 
     type: String, 
-    enum: ['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black', 'Bronze', 'Silver', 'Platinum', 'Gold', 'Going Gold'],
+    enum: ['None', 'White', 'Yellow', 'Orange', 'Green', 'Blue', 'Purple', 'Brown', 'Red', 'Black', 'Bronze', 'Silver', 'Platinum', 'Gold', 'Going Gold'],
     default: 'White'
   },
   totalNinjaBucks: { type: Number, default: 0 },

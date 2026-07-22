@@ -590,7 +590,7 @@ app.get('/shop', async (req, res) => {
 });
 app.get('/belts', async (req, res) => {
   const data = await getDashboardData();
-  const ninjas = await Ninja.find({ isActive: true }).sort({ name: 1 });
+  const ninjas = await Ninja.find({ isActive: true, type: 'Create' }).sort({ name: 1 });
   const theme = req.query.theme || data.theme;
   res.render('belts', { ninjas, theme, user: req.session.user });
 });
@@ -630,6 +630,31 @@ app.get('/admin/setup', async (req, res) => {
 app.get('/admin/add-ninja', isAuthenticated, (req, res) => res.render('add-ninja'));
 app.post('/admin/add-ninja', isAuthenticated, async (req, res) => {
   await Ninja.create({ name: req.body.name.trim(), currentBelt: req.body.currentBelt, totalNinjaBucks: req.body.totalNinjaBucks, type: req.body.type || 'Create' });
+  res.redirect('/admin');
+});
+
+app.get('/admin/graduate-junior', isAuthenticated, async (req, res) => {
+  const juniors = await Ninja.find({ isActive: true, type: 'Junior' }).sort({ name: 1 });
+  res.render('graduate-junior', { juniors });
+});
+
+app.post('/admin/graduate-junior', isAuthenticated, async (req, res) => {
+  const ninjaId = req.body.ninjaId;
+  const ninja = await Ninja.findById(ninjaId);
+  if (!ninja) return res.status(404).send('Ninja not found');
+  if (ninja.type !== 'Junior') return res.status(400).send('Ninja is not a Junior');
+
+  ninja.type = 'Create';
+  ninja.currentBelt = 'White';
+  await ninja.save();
+
+  // Push to sheets since they are now a Create kid
+  try {
+    await pushNBToSheets(ninja.name, 0, 'Graduation to Impact', ninja.totalNinjaBucks);
+  } catch (e) {
+    console.error('[Sheets] Graduation sync failed:', e.message);
+  }
+
   res.redirect('/admin');
 });
 
