@@ -1113,14 +1113,9 @@ app.post('/admin/sync-ninjas-from-sheets', isAuthenticated, async (req, res) => 
 
 app.get('/admin/ninja-bucks-award', isAuthenticated, async (req, res) => {
   const d = await getDashboardData();
-  const viewType = req.session.adminView || 'Create';
-  let leaderboard;
-  if (viewType === 'Junior') {
-    const juniors = await Ninja.find({ isActive: true, type: 'Junior' }).sort({ totalNinjaBucks: -1 });
-    leaderboard = juniors.map(n => ({ name: n.name, total: n.totalNinjaBucks }));
-  } else {
-    leaderboard = d.leaderboard;
-  }
+  const juniors = await Ninja.find({ isActive: true, type: 'Junior' });
+  const juniorLeaderboard = juniors.map(n => ({ name: n.name, total: n.totalNinjaBucks }));
+  const leaderboard = [...(d.leaderboard || []), ...juniorLeaderboard].sort((a, b) => a.name.localeCompare(b.name));
   res.render('ninja-bucks-award', { leaderboard, bossActive: d.bossActive, bossName: d.bossName });
 });
 app.post('/admin/update-ninja-bucks', isAuthenticated, async (req, res) => {
