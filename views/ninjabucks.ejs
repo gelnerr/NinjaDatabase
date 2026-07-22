@@ -8,48 +8,14 @@
   <link rel="stylesheet" href="/icons/bootstrap-icons.css">
   <link rel="stylesheet" href="/css/responsive.css">
   
-  <% if (theme === 'pixel') { %>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <style>
-      :root { --cn-blue: #00FF41; --cn-dark: #000; --cn-gray: #111; }
-      body { font-family: 'Press Start 2P', cursive; font-size: 0.8rem; color: white; }
-      .card, .hof-card { background: #222 !important; border: 4px solid white !important; color: white !important; }
-      .hof-name { color: white !important; }
-    </style>
-  <% } else if (theme === 'comic') { %>
-    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Permanent+Marker&display=swap" rel="stylesheet">
-    <style>
-      :root { --cn-blue: #E63946; --cn-dark: #000; --cn-gray: #003566; }
-      body { font-family: 'Permanent Marker', cursive; background-image: radial-gradient(#ffffff 10%, transparent 10%); background-size: 25px 25px; }
-      .card, .hof-card { border: 4px solid #000 !important; border-radius: 0 !important; box-shadow: 10px 10px 0px #000 !important; }
-      h2 { font-family: 'Bangers'; font-size: 3rem; -webkit-text-stroke: 1px #000; color: #E63946; }
-    </style>
-  <% } else if (theme === 'arcade') { %>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Monoton&display=swap" rel="stylesheet">
-    <style>
-      :root { --cn-blue: #FF00FF; --cn-dark: #000; --cn-gray: #000; }
-      body { font-family: 'Press Start 2P', cursive; background-image: linear-gradient(rgba(255, 0, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 0, 255, 0.1) 1px, transparent 1px); background-size: 40px 40px; color: white; }
-      .card, .hof-card { background: rgba(0,0,0,0.9) !important; border: 3px solid #00FFFF !important; box-shadow: 0 0 15px #00FFFF !important; color: white !important; }
-      h2 { font-family: 'Monoton'; color: #FFFF00; font-size: 3rem; }
-      .hof-name { color: white !important; }
-    </style>
-  <% } else if (theme === 'adventure') { %>
-    <link href="https://fonts.googleapis.com/css2?family=Titan+One&family=Fredoka:wght@600&display=swap" rel="stylesheet">
-    <style>
-      :root { --cn-blue: #43AA8B; --cn-dark: #444; --cn-gray: #ADE8F4; }
-      body { font-family: 'Fredoka', sans-serif; background-image: radial-gradient(circle at 10% 20%, rgba(255,255,255,0.8) 0%, transparent 20%); }
-      .card, .hof-card { border-radius: 30px !important; border: none !important; box-shadow: 0 10px 25px rgba(0,0,0,0.05) !important; }
-      h2 { font-family: 'Titan One'; color: #43AA8B; }
-    </style>
+  <% if (theme === 'space') { %>
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <% } else if (theme === 'cyber') { %>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;600;800&display=swap" rel="stylesheet">
   <% } else if (theme === 'deepsea') { %>
-    <link href="https://fonts.googleapis.com/css2?family=Titan+One&family=Quicksand:wght@700&display=swap" rel="stylesheet">
-    <style>
-      :root { --cn-blue: #00E5FF; --cn-dark: #001219; --cn-gray: #005F73; }
-      body { font-family: 'Quicksand', sans-serif; background: radial-gradient(circle, #005F73 0%, #001219 100%); color: white; }
-      .card, .hof-card { background: rgba(10, 40, 50, 0.85) !important; border: 2px solid #00E5FF !important; color: white !important; backdrop-filter: blur(10px); }
-      h2 { font-family: 'Titan One'; color: #00E5FF; text-shadow: 0 0 10px #00E5FF; }
-      .hof-name { color: white !important; }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Titan+One&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+  <% } else if (theme === 'undertale') { %>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <% } %>
 
   <style>
@@ -107,6 +73,71 @@
 
     .btn-back { border-radius: 20px; font-weight: 600; padding: 8px 20px; }
   </style>
+
+  <% if (theme === 'space') { %>
+  <style>
+    :root { --cn-blue: #4D96FF; --cn-dark: #1A1A2E; --cn-gray: #1A1A2E; }
+    body { background-color: #1A1A2E !important; background-image: radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px), radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px) !important; background-size: 550px 550px, 350px 350px !important; color: #e8eaff !important; font-family: 'Fredoka', sans-serif !important; }
+    .card, .hof-card { background: rgba(255,255,255,0.95) !important; border: 5px solid #6D5BBA !important; border-radius: 28px !important; box-shadow: 0 8px 0 #6D5BBA !important; color: #1A1A2E !important; }
+    h2 { font-family: 'Luckiest Guy'; color: #FFD93D; -webkit-text-stroke: 1px #1A1A2E; }
+    .hof-name { color: #1A1A2E !important; }
+    .hof-value { color: #6D5BBA !important; }
+    .table thead th { background: rgba(109,91,186,0.08) !important; color: #6D5BBA !important; }
+    .bucks-badge { background: #fff3cd !important; color: #856404 !important; }
+    .bucks-total { background: rgba(77,150,255,0.15) !important; color: #1a56b0 !important; }
+    .text-muted { color: #b0bae8 !important; }
+    .section-title { color: #b0bae8 !important; }
+  </style>
+  <% } else if (theme === 'cyber') { %>
+  <style>
+    :root { --cn-blue: #FF9F1C; --cn-dark: #011627; --cn-gray: #011627; }
+    body { background-color: #011627 !important; background-image: linear-gradient(rgba(46,196,182,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(46,196,182,0.05) 1px, transparent 1px) !important; background-size: 30px 30px !important; color: #FDFFFC !important; font-family: 'Exo 2', sans-serif !important; }
+    .card, .hof-card { background: rgba(1,22,39,0.92) !important; border: 1px solid rgba(46,196,182,0.35) !important; border-left: 4px solid #FF9F1C !important; border-radius: 8px !important; box-shadow: 0 0 20px rgba(255,159,28,0.12) !important; color: #FDFFFC !important; backdrop-filter: blur(10px); }
+    h2 { font-family: 'Orbitron'; color: #FFBF00; letter-spacing: 2px; }
+    .hof-name { color: #FDFFFC !important; }
+    .hof-value { color: #2EC4B6 !important; }
+    .table { color: #FDFFFC !important; }
+    .table thead th { background: rgba(1,22,39,0.95) !important; color: #2EC4B6 !important; }
+    .bucks-badge { background: rgba(255,159,28,0.15) !important; color: #FF9F1C !important; }
+    .bucks-total { background: rgba(46,196,182,0.15) !important; color: #2EC4B6 !important; }
+    .text-muted { color: #8899aa !important; }
+    .section-title { color: #8899aa !important; }
+  </style>
+  <% } else if (theme === 'deepsea') { %>
+  <style>
+    :root { --cn-blue: #00e5ff; --cn-dark: #000d1a; --cn-gray: #000d1a; }
+    body { background: radial-gradient(ellipse at 20% 80%, #001f3f 0%, #000d1a 60%, #000508 100%) fixed !important; color: #94d2bd !important; font-family: 'Nunito', sans-serif !important; }
+    .card, .hof-card { background: rgba(0,20,50,0.82) !important; border: 2px solid rgba(0,229,255,0.45) !important; border-radius: 16px !important; color: #94d2bd !important; backdrop-filter: blur(8px); box-shadow: 0 0 20px rgba(0,229,255,0.08) !important; }
+    h2 { font-family: 'Titan One'; color: #00e5ff; text-shadow: 0 0 12px rgba(0,229,255,0.5); }
+    .hof-name { color: #e0f7fa !important; }
+    .hof-value { color: #00e5ff !important; }
+    .table { color: #94d2bd !important; }
+    .table thead th { background: rgba(0,20,50,0.6) !important; color: #00e5ff !important; }
+    .bucks-badge { background: rgba(0,229,255,0.1) !important; color: #80deea !important; }
+    .bucks-total { background: rgba(0,229,255,0.18) !important; color: #00e5ff !important; }
+    .text-muted { color: #7aada8 !important; }
+    .section-title { color: #7aada8 !important; }
+  </style>
+  <% } else if (theme === 'undertale') { %>
+  <style>
+    :root { --cn-blue: #00ffff; --cn-dark: #000; --cn-gray: #000; }
+    body { background: #000 !important; color: #fff !important; font-family: 'Press Start 2P', monospace !important; font-size: 0.72rem !important; image-rendering: pixelated; }
+    body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9998; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 4px); }
+    .card, .hof-card { background: #000 !important; border: 4px solid #fff !important; border-radius: 0 !important; box-shadow: 5px 5px 0 #fff !important; color: #fff !important; }
+    .hof-card.rank-1 { border-color: #ffff00 !important; box-shadow: 5px 5px 0 #ffff00 !important; }
+    h2 { color: #ffff00 !important; text-shadow: 2px 2px 0 #ff0000; }
+    .hof-name { color: #fff !important; font-size: 11px !important; }
+    .hof-value { color: #00ffff !important; }
+    .table { color: #fff !important; }
+    .table thead th { background: #111 !important; color: #ffff00 !important; }
+    .table-hover tbody tr:hover td { background: rgba(255,255,255,0.06) !important; }
+    .bucks-badge { background: rgba(255,255,0,0.12) !important; color: #ffff00 !important; }
+    .bucks-total { background: rgba(0,255,255,0.12) !important; color: #00ffff !important; }
+    #ninjaSearch { background: #000 !important; border: 3px solid #fff !important; border-radius: 0 !important; color: #fff !important; }
+    .text-muted { color: #888 !important; }
+    .section-title { color: #888 !important; }
+  </style>
+  <% } %>
 </head>
 <body>
   <% if (locals.user) { %>
@@ -144,9 +175,15 @@
         <h2 class="fw-bold mb-1">Ninja Bucks Hall of Fame</h2>
         <p class="text-muted">Celebrating our hardworking ninjas! Search for your name below.</p>
       </div>
-      <div class="position-relative" style="width: 300px;">
-        <i class="bi bi-search search-icon"></i>
-        <input type="text" id="ninjaSearch" class="form-control search-box" placeholder="Search your name..." onkeyup="filterTable()">
+      <div class="d-flex flex-column align-items-end gap-3">
+        <div class="btn-group shadow-sm rounded-pill" role="group">
+          <a href="/ninjabucks?type=Create" class="btn btn-outline-primary <%= currentType === 'Create' ? 'active fw-bold' : '' %>" style="border-radius: 50px 0 0 50px; font-family: 'Segoe UI', sans-serif;">Create Kids</a>
+          <a href="/ninjabucks?type=Junior" class="btn btn-outline-primary <%= currentType === 'Junior' ? 'active fw-bold' : '' %>" style="border-radius: 0 50px 50px 0; font-family: 'Segoe UI', sans-serif;">Junior Kids</a>
+        </div>
+        <div class="position-relative" style="width: 300px;">
+          <i class="bi bi-search search-icon"></i>
+          <input type="text" id="ninjaSearch" class="form-control search-box" placeholder="Search your name..." onkeyup="filterTable()">
+        </div>
       </div>
     </div>
 

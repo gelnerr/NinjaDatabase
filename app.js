@@ -568,8 +568,21 @@ app.get('/', async (req, res) => {
   res.render('dashboard', data);
 });
 app.get('/ninjabucks', async (req, res) => {
-  const data = await getDashboardData(); await syncGoogleSheets(data);
-  res.render('ninjabucks', { leaderboard: data.leaderboard || [], monthlyLeaderboard: data.monthlyLeaderboard || [], theme: data.theme, user: req.session.user });
+  const data = await getDashboardData(); 
+  await syncGoogleSheets(data);
+  const type = req.query.type === 'Junior' ? 'Junior' : 'Create';
+  
+  let leaderboard, monthlyLeaderboard;
+  if (type === 'Junior') {
+    const juniors = await Ninja.find({ type: 'Junior', isActive: true });
+    leaderboard = juniors.map(n => ({ name: n.name, total: n.totalNinjaBucks }));
+    monthlyLeaderboard = []; // Juniors don't have sheets yet
+  } else {
+    leaderboard = data.leaderboard || [];
+    monthlyLeaderboard = data.monthlyLeaderboard || [];
+  }
+  
+  res.render('ninjabucks', { leaderboard, monthlyLeaderboard, theme: data.theme, user: req.session.user, currentType: type });
 });
 app.get('/shop', async (req, res) => {
   const data = await getDashboardData();
