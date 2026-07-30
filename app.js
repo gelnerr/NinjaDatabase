@@ -9,6 +9,7 @@ const { google } = require('googleapis');
 const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
 const csv = require('csv-parser');
+const cron = require('node-cron');
 
 const Dashboard = require('./models/Dashboard');
 const User = require('./models/User');
@@ -981,8 +982,8 @@ app.post('/admin/update-dashboard', isAuthenticated, upload.any(), async (req, r
     });
     return list;
   };
-  d.activitiesThisWeek = procList('activitiesThisWeek', ['desc', 'url', 'link']).map(a => ({ description: a.desc, image: a.url, link: a.link }));
-  d.activitiesNextWeek = procList('activitiesNextWeek', ['desc', 'url', 'link']).map(a => ({ description: a.desc, image: a.url, link: a.link }));
+  d.activitiesThisWeek = procList('activitiesThisWeek', ['desc', 'url', 'link']).map(a => ({ description: a.desc, image: a.url || '/public/img/cn_logo2.png', link: a.link }));
+  d.activitiesNextWeek = procList('activitiesNextWeek', ['desc', 'url', 'link']).map(a => ({ description: a.desc, image: a.url || '/public/img/cn_logo2.png', link: a.link }));
   d.ninjasOfTheMonth = procList('notm', ['name', 'type', 'image']);
   d.specialEvents = procList('events', ['date', 'text']).map(e => ({ date: e.date, text: e.text })).filter(e => e.text);
   d.notmMonth = b.notmMonth; d.notmColor = b.notmColor; d.funFact = b.funFact; d.senseiOfMonth = b.senseiOfMonth;
@@ -1576,6 +1577,24 @@ app.post('/admin/archive-month', isAuthenticated, async (req, res) => {
     await d.save();
     res.json({ success: true });
   } catch (error) { res.status(500).send(error.message); }
+});
+
+// Automatically rotate weekly activities every Monday at 00:00 (midnight)
+const rotateWeeklyActivities = async () => {
+  try {
+    const d = await getDashboardData();
+    d.activitiesThisWeek = d.activitiesNextWeek || [];
+    d.activitiesNextWeek = [];
+    await d.save();
+    console.log('[Cron] Rotated weekly activities.');
+  } catch (err) {
+    console.error('[Cron] Error rotating weekly activities:', err);
+  }
+};
+cron.schedule('0 0 * * 1', rotateWeeklyActivities);
+app.get('/api/cron/rotate-activities', async (req, res) => {
+  await rotateWeeklyActivities();
+  res.json({ success: true, message: 'Activities rotated' });
 });
 
 app.use((err, req, res, next) => { console.error(err); res.status(500).send(err.message); });
