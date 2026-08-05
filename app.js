@@ -1142,7 +1142,8 @@ app.get('/admin/ninja-bucks-award', isAuthenticated, async (req, res) => {
   const juniors = await Ninja.find({ isActive: true, type: 'Junior' });
   const juniorLeaderboard = juniors.map(n => ({ name: n.name, total: n.totalNinjaBucks }));
   const leaderboard = [...(d.leaderboard || []), ...juniorLeaderboard].sort((a, b) => a.name.localeCompare(b.name));
-  res.render('ninja-bucks-award', { leaderboard, bossActive: d.bossActive, bossName: d.bossName });
+  const recentLogs = await NBLog.find({ isArchived: false }).sort({ date: -1 }).limit(10);
+  res.render('ninja-bucks-award', { leaderboard, bossActive: d.bossActive, bossName: d.bossName, recentLogs });
 });
 app.post('/admin/update-ninja-bucks', isAuthenticated, async (req, res) => {
   const { ninjaName, amount, reason } = req.body;
