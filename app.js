@@ -680,11 +680,13 @@ app.post('/admin/ninjas/:id/update-belt', isAuthenticated, async (req, res) => {
   
   if (old !== n.currentBelt) {
     const notes = req.body.notes || 'Manual Update';
-    await Promise.all([
-      ProgressLog.create({ ninjaName: n.name, oldBelt: old, newBelt: n.currentBelt, notes, discordPosted: true }),
-      sendDiscordNotification(n.name, old, n.currentBelt, notes),
+    const isSilent = req.body.silent === true || req.body.silent === 'true';
+    const tasks = [
+      ProgressLog.create({ ninjaName: n.name, oldBelt: old, newBelt: n.currentBelt, notes, discordPosted: !isSilent }),
       pushBeltToSheets(n.name, old, n.currentBelt, notes).catch(e => console.error('[Sheets] Belt push failed:', e.message))
-    ]);
+    ];
+    if (!isSilent) tasks.push(sendDiscordNotification(n.name, old, n.currentBelt, notes));
+    await Promise.all(tasks);
   }
   res.json({ success: true });
 });

@@ -9,8 +9,10 @@
 
 <style>
   .matrix-container { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow-x: auto; }
-  .belt-cell { min-width: 140px; text-align: center; vertical-align: top; border: 1px solid #dee2e6; }
-  .ninja-tag { font-size: 0.8rem; padding: 4px 10px; margin: 4px; display: block; border-radius: 6px; background: white; border-left: 4px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: 600; text-align: left; }
+  .belt-cell { min-width: 140px; text-align: center; vertical-align: top; border: 1px solid #dee2e6; transition: background 0.2s; }
+  .ninja-tag { font-size: 0.8rem; padding: 4px 10px; margin: 4px; display: block; border-radius: 6px; background: white; border-left: 4px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: 600; text-align: left; cursor: grab; }
+  .ninja-tag:active { cursor: grabbing; }
+  .drag-over { background: rgba(0,0,0,0.03); }
 
   .header-white { background: #f8f9fa; color: #333; }
   .header-yellow { background: #fff200; color: #333; }
@@ -59,20 +61,90 @@
     <tbody>
       <tr>
         <% BELT_LIST.forEach(belt => { %>
-          <td class="belt-cell p-2">
+          <td class="belt-cell p-2" data-belt="<%= belt %>">
             <%
               const beltNinjas = ninjas.filter(n => n.currentBelt === belt);
               const tagCls = 'tag-' + belt.toLowerCase().replace(' ', '-');
               beltNinjas.forEach(ninja => {
             %>
-              <div class="ninja-tag <%= tagCls %>"><%= ninja.name %></div>
+              <div class="ninja-tag <%= tagCls %>" draggable="true" data-id="<%= ninja._id %>"><%= ninja.name %></div>
             <% }); %>
-            <% if(beltNinjas.length === 0) { %><div class="text-muted small text-center py-3">-</div><% } %>
+            <% if(beltNinjas.length === 0) { %><div class="text-muted small text-center py-3 empty-state">-</div><% } %>
           </td>
         <% }); %>
       </tr>
     </tbody>
   </table>
 </div>
+
+<script>
+  let dragItem = null;
+
+  document.querySelectorAll('.ninja-tag').forEach(tag => {
+    tag.addEventListener('dragstart', (e) => {
+      dragItem = tag;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => tag.style.opacity = '0.5', 0);
+    });
+    tag.addEventListener('dragend', () => {
+      setTimeout(() => {
+        if (dragItem) dragItem.style.opacity = '1';
+        dragItem = null;
+      }, 0);
+    });
+  });
+
+  document.querySelectorAll('.belt-cell').forEach(cell => {
+    cell.addEventListener('dragover', (e) => {
+      if (!cell.hasAttribute('data-belt')) return;
+      e.preventDefault();
+      cell.classList.add('drag-over');
+    });
+    cell.addEventListener('dragleave', () => {
+      cell.classList.remove('drag-over');
+    });
+    cell.addEventListener('drop', async (e) => {
+      if (!cell.hasAttribute('data-belt')) return;
+      e.preventDefault();
+      cell.classList.remove('drag-over');
+      if (!dragItem) return;
+
+      const ninjaId = dragItem.dataset.id;
+      const targetBelt = cell.dataset.belt;
+      const sourceCell = dragItem.closest('.belt-cell');
+      
+      if (sourceCell === cell) return;
+
+      // Optimistic UI update
+      cell.appendChild(dragItem);
+      
+      const targetEmpty = cell.querySelector('.empty-state');
+      if (targetEmpty) targetEmpty.remove();
+
+      if (sourceCell.querySelectorAll('.ninja-tag').length === 0) {
+        sourceCell.innerHTML = '<div class="text-muted small text-center py-3 empty-state">-</div>';
+      }
+
+      const tagCls = 'tag-' + targetBelt.toLowerCase().replace(' ', '-');
+      dragItem.className = `ninja-tag ${tagCls}`;
+
+      try {
+        const res = await fetch(`/admin/ninjas/${ninjaId}/update-belt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentBelt: targetBelt, silent: true })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed to update');
+      } catch (err) {
+        console.error(err);
+        alert('Failed to update belt!');
+        sourceCell.appendChild(dragItem); // Revert
+        const sourceEmpty = sourceCell.querySelector('.empty-state');
+        if (sourceEmpty) sourceEmpty.remove();
+      }
+    });
+  });
+</script>
 
 <%- include('partials/admin-footer') %>
