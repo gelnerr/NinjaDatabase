@@ -591,7 +591,7 @@ app.get('/shop', async (req, res) => {
 });
 app.get('/belts', async (req, res) => {
   const data = await getDashboardData();
-  const ninjas = await Ninja.find({ isActive: true, type: 'Create' }).sort({ name: 1 });
+  const ninjas = await Ninja.find({ isActive: true }).sort({ name: 1 });
   const theme = req.query.theme || data.theme;
   res.render('belts', { ninjas, theme, user: req.session.user });
 });
