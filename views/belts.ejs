@@ -8,24 +8,14 @@
   <link rel="stylesheet" href="/icons/bootstrap-icons.css">
   <link rel="stylesheet" href="/css/responsive.css">
   
-  <% if (theme === 'stellar') { %>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
-    <style>
-      :root { --stellar-purple: #7B2CBF; --stellar-glow: #00E5FF; --stellar-bg: #10002B; }
-      body { background-color: var(--stellar-bg); background-image: radial-gradient(circle at 20% 30%, rgba(123, 44, 191, 0.2) 0%, transparent 40%); color: white; font-family: 'Quicksand', sans-serif; }
-      .belt-header { background: rgba(255, 255, 255, 0.05) !important; backdrop-filter: blur(15px); border: 1px solid var(--stellar-glow) !important; color: var(--stellar-glow) !important; text-shadow: 0 0 10px var(--stellar-glow) !important; font-family: 'Orbitron'; }
-      .ninja-card { background: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; backdrop-filter: blur(10px); color: white !important; border-radius: 15px !important; }
-      .ninja-item { color: white !important; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-    </style>
-  <% } else if (theme === 'pixel') { %>
+  <% if (theme === 'space') { %>
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <% } else if (theme === 'cyber') { %>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;600;800&display=swap" rel="stylesheet">
+  <% } else if (theme === 'deepsea') { %>
+    <link href="https://fonts.googleapis.com/css2?family=Titan+One&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+  <% } else if (theme === 'undertale') { %>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <style>
-      :root { --cn-blue: #00FF41; --cn-dark: #000; --cn-gray: #111; }
-      body { font-family: 'Press Start 2P', cursive; font-size: 0.8rem; color: white; }
-      .belt-header { border: 4px solid white !important; border-radius: 0 !important; }
-      .ninja-card { background: #222 !important; border: 4px solid white !important; color: white !important; border-radius: 0 !important; }
-      .ninja-item { color: #00FF41 !important; }
-    </style>
   <% } %>
 
   <style>
@@ -90,10 +80,16 @@
     .ninja-list { list-style: none; padding: 0; margin: 0; }
     .ninja-item {
       padding: 10px 12px;
-      font-size: 1rem;
+      font-size: 1.05rem;
       color: #334455;
       font-weight: 700;
-      transition: all 0.2s;
+      transition: all 0.2s ease-in-out;
+      border-radius: 8px;
+    }
+    .ninja-item:hover {
+      background-color: rgba(53, 142, 188, 0.1);
+      transform: translateX(5px);
+      color: var(--cn-blue);
     }
     
     /* Belt Colors */
@@ -160,6 +156,49 @@
       .scroll-btn { display: none; }
     }
   </style>
+
+  <% if (theme === 'space') { %>
+  <style>
+    :root { --cn-blue: #4D96FF; --cn-dark: #1A1A2E; --cn-gray: #1A1A2E; }
+    body { background-color: #1A1A2E !important; background-image: radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px), radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px) !important; background-size: 550px 550px, 350px 350px !important; color: #e8eaff !important; font-family: 'Fredoka', sans-serif !important; }
+    .ninja-card { background: rgba(255,255,255,0.95) !important; color: #1A1A2E !important; border-top-width: 6px !important; }
+    .ninja-item { color: #1A1A2E !important; }
+    h2 { font-family: 'Luckiest Guy' !important; color: #FFD93D !important; }
+    .text-muted { color: #b0bae8 !important; }
+    .totem-grid::-webkit-scrollbar-thumb { border-color: #1A1A2E !important; }
+  </style>
+  <% } else if (theme === 'cyber') { %>
+  <style>
+    :root { --cn-blue: #FF9F1C; --cn-dark: #011627; --cn-gray: #011627; }
+    body { background-color: #011627 !important; background-image: linear-gradient(rgba(46,196,182,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(46,196,182,0.05) 1px, transparent 1px) !important; background-size: 30px 30px !important; color: #FDFFFC !important; font-family: 'Exo 2', sans-serif !important; }
+    .ninja-card { background: rgba(1,22,39,0.92) !important; border: 1px solid rgba(46,196,182,0.35) !important; border-left: 4px solid #FF9F1C !important; border-radius: 8px !important; color: #FDFFFC !important; backdrop-filter: blur(10px); }
+    .ninja-item { color: #FDFFFC !important; border-bottom-color: rgba(46,196,182,0.15) !important; }
+    h2 { font-family: 'Orbitron' !important; color: #FFBF00 !important; }
+    .text-muted { color: #8899aa !important; }
+    .totem-grid::-webkit-scrollbar-thumb { border-color: #011627 !important; }
+  </style>
+  <% } else if (theme === 'deepsea') { %>
+  <style>
+    :root { --cn-blue: #00e5ff; --cn-dark: #000d1a; --cn-gray: #000d1a; }
+    body { background: radial-gradient(ellipse at 20% 80%, #001f3f 0%, #000d1a 60%, #000508 100%) fixed !important; color: #94d2bd !important; font-family: 'Nunito', sans-serif !important; }
+    .ninja-card { background: rgba(0,20,50,0.82) !important; border: 2px solid rgba(0,229,255,0.45) !important; border-radius: 14px !important; color: #94d2bd !important; backdrop-filter: blur(8px); }
+    .ninja-item { color: #94d2bd !important; border-bottom-color: rgba(0,229,255,0.15) !important; }
+    h2 { font-family: 'Titan One' !important; color: #00e5ff !important; text-shadow: 0 0 12px rgba(0,229,255,0.5); }
+    .text-muted { color: #7aada8 !important; }
+    .totem-grid::-webkit-scrollbar-thumb { border-color: #000d1a !important; }
+  </style>
+  <% } else if (theme === 'undertale') { %>
+  <style>
+    :root { --cn-blue: #00ffff; --cn-dark: #000; --cn-gray: #000; }
+    body { background: #000 !important; color: #fff !important; font-family: 'Press Start 2P', monospace !important; font-size: 0.72rem !important; image-rendering: pixelated; }
+    body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9998; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 4px); }
+    .ninja-card { background: #000 !important; border: 4px solid #fff !important; border-radius: 0 !important; box-shadow: 5px 5px 0 #fff !important; color: #fff !important; }
+    .ninja-item { color: #00ffff !important; border-bottom-color: rgba(255,255,255,0.15) !important; }
+    h2 { color: #ffff00 !important; text-shadow: 2px 2px 0 #ff0000; }
+    .text-muted { color: #888 !important; }
+    .totem-grid::-webkit-scrollbar-thumb { border-color: #000 !important; }
+  </style>
+  <% } %>
 </head>
 <body>
   <% if (locals.user) { %>
@@ -173,43 +212,7 @@
     </div>
   <% } %>
 
-  <% if (!locals.user) { %>
-  <!-- Under Construction overlay for public visitors -->
-  <div style="
-    position: fixed; inset: 0; z-index: 9000;
-    background: rgba(0,0,0,0.88);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; backdrop-filter: blur(6px);
-  ">
-    <div style="
-      background: linear-gradient(135deg, #1a1a2e 0%, #231f20 100%);
-      border: 3px solid #ffd700;
-      border-radius: 24px;
-      padding: 50px 60px;
-      max-width: 520px;
-      box-shadow: 0 0 60px rgba(255,215,0,0.2);
-    ">
-      <div style="font-size: 5rem; margin-bottom: 10px;">🚧</div>
-      <h1 style="color: #ffd700; font-size: 2.4rem; font-weight: 900; letter-spacing: 2px; margin-bottom: 12px;">Under Construction</h1>
-      <p style="color: rgba(255,255,255,0.65); font-size: 1.05rem; line-height: 1.6; margin-bottom: 28px;">
-        The Belts Totem is getting a major upgrade!<br>
-        Check back soon — it's going to be epic. 🥋
-      </p>
-      <a href="/" style="
-        display: inline-block;
-        background: #ffd700; color: #231f20;
-        font-weight: 800; font-size: 1rem;
-        padding: 12px 32px; border-radius: 50px;
-        text-decoration: none;
-        box-shadow: 0 4px 0 #c9a500;
-        transition: transform 0.1s;
-      " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-        ← Back to Dashboard
-      </a>
-    </div>
-    <div style="color: rgba(255,255,255,0.2); font-size: 0.7rem; margin-top: 24px; letter-spacing: 2px;">CODE NINJAS · BELTS TOTEM · COMING SOON</div>
-  </div>
-  <% } %>
+
 
   <main class="main <%= locals.user ? 'with-sidebar' : 'no-sidebar' %>">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -222,7 +225,7 @@
         <% } %>
         <h2 class="fw-bold mb-1">Belts Totem</h2>
         <% if (locals.user) { %>
-          <p class="text-muted">Admin preview — public visitors see the "Under Construction" screen.</p>
+          <p class="text-muted">Admin view.</p>
         <% } else { %>
           <p class="text-muted">Celebrating the achievements of our Ninjas!</p>
         <% } %>
