@@ -570,18 +570,23 @@ app.get('/', async (req, res) => {
 });
 app.get('/ninjabucks', async (req, res) => {
   const data = await getDashboardData(); 
-  await syncGoogleSheets(data);
   const type = req.query.type === 'Junior' ? 'Junior' : 'Create';
   
-  let leaderboard, monthlyLeaderboard;
-  if (type === 'Junior') {
-    const juniors = await Ninja.find({ type: 'Junior', isActive: true });
-    leaderboard = juniors.map(n => ({ name: n.name, total: n.totalNinjaBucks }));
-    monthlyLeaderboard = []; // Juniors don't have sheets yet
-  } else {
-    leaderboard = data.leaderboard || [];
-    monthlyLeaderboard = data.monthlyLeaderboard || [];
-  }
+  const ninjas = await Ninja.find({ type, isActive: true });
+  
+  // Calculate monthly bucks directly from NBLog (MongoDB)
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0,0,0,0);
+  
+  const monthlyLogs = await NBLog.aggregate([
+    { $match: { date: { $gte: startOfMonth }, isArchived: false } },
+    { $group: { _id: '$ninjaName', monthly: { $sum: '$amount' } } }
+  ]);
+  const monthlyMap = new Map(monthlyLogs.map(l => [l._id, l.monthly]));
+  
+  const leaderboard = ninjas.map(n => ({ name: n.name, total: n.totalNinjaBucks, monthly: monthlyMap.get(n.name) || 0 }));
+  const monthlyLeaderboard = leaderboard.filter(n => n.monthly > 0).sort((a,b) => b.monthly - a.monthly);
   
   res.render('ninjabucks', { leaderboard, monthlyLeaderboard, theme: data.theme, user: req.session.user, currentType: type });
 });
@@ -1141,9 +1146,8 @@ app.post('/admin/sync-ninjas-from-sheets', isAuthenticated, async (req, res) => 
 
 app.get('/admin/ninja-bucks-award', isAuthenticated, async (req, res) => {
   const d = await getDashboardData();
-  const juniors = await Ninja.find({ isActive: true, type: 'Junior' });
-  const juniorLeaderboard = juniors.map(n => ({ name: n.name, total: n.totalNinjaBucks }));
-  const leaderboard = [...(d.leaderboard || []), ...juniorLeaderboard].sort((a, b) => a.name.localeCompare(b.name));
+  const allNinjas = await Ninja.find({ isActive: true });
+  const leaderboard = allNinjas.map(n => ({ name: n.name, total: n.totalNinjaBucks })).sort((a, b) => a.name.localeCompare(b.name));
   const recentLogs = await NBLog.find({ isArchived: false }).sort({ date: -1 }).limit(10);
   res.render('ninja-bucks-award', { leaderboard, bossActive: d.bossActive, bossName: d.bossName, recentLogs });
 });
