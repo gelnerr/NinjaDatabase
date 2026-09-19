@@ -580,7 +580,13 @@ app.get('/ninjabucks', async (req, res) => {
   startOfMonth.setHours(0,0,0,0);
   
   const monthlyLogs = await NBLog.aggregate([
-    { $match: { date: { $gte: startOfMonth }, isArchived: false } },
+    { $match: { 
+        date: { $gte: startOfMonth }, 
+        isArchived: false,
+        amount: { $gt: 0 },
+        buttonAction: { $nin: ['fix', 'Correction / Reversal', 'FIxing Double Redemption', 'Manual Update'] }
+      } 
+    },
     { $group: { _id: '$ninjaName', monthly: { $sum: '$amount' } } }
   ]);
   const monthlyMap = new Map(monthlyLogs.map(l => [l._id, l.monthly]));
